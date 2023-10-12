@@ -29,5 +29,9 @@ Route::group(['prefix' => 'v1'], function(){
         Route::prefix('/mbkm-bkpl')->group(function (){
             Route::get('/pelaksanaan', [\App\Http\Controllers\Api\MbkmBkplController::class, 'pelaksanaan']);
         });
+
+        Route::prefix('/chart')->group(function (){
+            Route::get('/mhs-daftar', [\App\Http\Controllers\Api\ChartController::class, 'mhsDaftar']);
+        });
     });
 });
