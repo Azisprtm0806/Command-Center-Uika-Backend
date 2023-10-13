@@ -6,8 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
 use App\Models\Pmb_Provinsi;
 use App\Models\Pmb_Registration;
+use App\Models\Siak_Departemen;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 
 class ChartController extends Controller
 {
@@ -102,6 +103,24 @@ class ChartController extends Controller
     
               return new ApiResource(true, 'Chart Mahasiswa Per Faultas', $finalResponse);
             } else if($key == 'prodi'){
+              $dataTerimaProdi = Pmb_Registration::join('pmb_registration_payment AS b', 'b.registration_no', '=', 'pmb_registration.registration_no')
+                ->join('pmb_candidate AS c', 'c.registration_no', '=', 'pmb_registration.registration_no')
+                ->join('siak_department AS d', 'd.code', '=', 'pmb_registration.department_code')
+                ->join('siak_faculty AS e', 'e.code', '=', 'd.faculty_code')
+                ->where('b.paid', 'Y')
+                ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+                ->where('pmb_registration.academic_year', '2023/2024')
+                ->where('pmb_registration.semester', 'GASAL')
+                ->groupBy('d.code', 'e.name', 'd.name')
+                ->orderBy('e.code')
+                ->orderBy('d.npm_code')
+                ->select('e.name AS fakultas', 'd.name AS prodi', \DB::raw('SUM(CASE WHEN c.student_code <> "" THEN 1 ELSE 0 END) AS total'))
+                ->get();
+
+                foreach ($dataTerimaProdi as $key => $item) {
+                  $dataTerimaProdi[$key]['total'] = intval($item['total']);
+              }
+            
               $totalsMahasiswaDaftar = [];
               $totalsMahasiswaDiterima = [];
               $totalsJumlah = [];
@@ -117,7 +136,7 @@ class ChartController extends Controller
                   $totalsMahasiswaDaftar[] = $total;
               }
 
-              foreach ($dataTerima as $item) {
+              foreach ($dataTerimaProdi as $item) {
                   $total = $item['total'];
 
                   $totalsMahasiswaDiterima[] = $total;
@@ -151,37 +170,75 @@ class ChartController extends Controller
 
               return new ApiResource(true, 'Chart Mahasiswa Per Prodi', $finalResponse);
             } else if($key == 'provinsi'){
-              
-              $dataPerProvinsi = Pmb_Provinsi::join('pmb_candidate AS c', 'pmb_provinsi.id', '=', 'c.prov_code')
-              ->join('pmb_registration AS a', 'c.registration_no', '=', 'a.registration_no')
-              ->join('pmb_registration_payment AS b', 'a.registration_no', '=', 'b.registration_no')
-              ->where('b.paid', 'Y')
-              ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
-              ->where('a.academic_year', '2023/2024')
-              ->where('a.semester', 'GASAL')
-              ->groupBy('pmb_provinsi.id', 'pmb_provinsi.name')
-              ->orderBy('pmb_provinsi.name', 'ASC')
-              ->select('pmb_provinsi.name AS provinsi', \DB::raw('COUNT(a.registration_no) AS total'))
-              ->get();
+              $dataPerProvinsiDaftar = Pmb_Provinsi::join('pmb_candidate AS c', 'pmb_provinsi.id', '=', 'c.prov_code')
+                ->join('pmb_registration AS a', 'c.registration_no', '=', 'a.registration_no')
+                ->join('pmb_registration_payment AS b', 'a.registration_no', '=', 'b.registration_no')
+                ->where('b.paid', 'Y')
+                ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+                ->where('a.academic_year', '2023/2024')
+                ->where('a.semester', 'GASAL')
+                ->groupBy('pmb_provinsi.id', 'pmb_provinsi.name')
+                ->orderBy('pmb_provinsi.name', 'ASC')
+                ->select('pmb_provinsi.name AS provinsi', \DB::raw('COUNT(a.registration_no) AS total'))
+                ->get();
+
+              $dataPerProvinsiDiterima = Pmb_Provinsi::join('pmb_candidate AS c', 'pmb_provinsi.id', '=', 'c.prov_code')
+                ->join('pmb_registration AS a', 'c.registration_no', '=', 'a.registration_no')
+                ->join('pmb_registration_payment AS b', 'a.registration_no', '=', 'b.registration_no')
+                ->where('b.paid', 'Y')
+                ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+                ->where('a.academic_year', '2023/2024')
+                ->where('a.semester', 'GASAL')
+                ->groupBy('pmb_provinsi.id', 'pmb_provinsi.name')
+                ->orderBy('pmb_provinsi.name', 'ASC')
+                ->select('pmb_provinsi.name AS provinsi', \DB::raw('SUM(CASE WHEN c.student_code <> "" THEN 1 ELSE 0 END) AS total'))
+                ->get();
 
               
-              $totalMahasiswa = [];
+              $totalDaftarMhs = [];
+              $totalDiterimaMhs = [];
+              $totalsJumlahMhs = [];
               $labels = [];
 
-              foreach ($dataPerProvinsi as $item) {
+              foreach ($dataPerProvinsiDaftar as $item) {
                 $provinsi = $item['provinsi'];
                 $total = $item['total'];
 
                 $labels[] = $provinsi;
-                $totalMahasiswa[] = $total;
+                $totalDaftarMhs[] = $total;
               }
+
+              foreach ($dataPerProvinsiDiterima as $item) {
+                $provinsi = $item['provinsi'];
+                $total = $item['total'];
+
+                $totalDiterimaMhs[] = $total;
+              }
+
+              foreach (array_keys($totalDaftarMhs) as $provinsi) {
+                $jumlah = isset($totalDiterimaMhs[$provinsi]) ? $totalDiterimaMhs[$provinsi] : 0;
+                $totalsJumlahMhs[] = $totalDaftarMhs[$provinsi] + $jumlah;
+            }
 
               $finalResponse = [
                 'series' => [
-                  'name' => 'Total Per Provinsi',
-                  'type' => 'column',
-                  'data' => $totalMahasiswa,
-                ],
+                  [
+                      'name' => 'Mahasiswa Daftar Per Provinsi',
+                      'type' => 'column',
+                      'data' => $totalDaftarMhs,
+                  ],
+                  [
+                      'name' => 'Mahasiswa Diterima Per  Provinsi',
+                      'type' => 'column',
+                      'data' => $totalDiterimaMhs,
+                  ],
+                  [
+                      'name' => 'Jumlah Mahasiswa',
+                      'type' => 'line',
+                      'data' => $totalsJumlahMhs,
+                  ],
+              ],
+                
                 'label' => $labels
               ];
 

@@ -10,6 +10,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/mhs-daftar', [\App\Http\Controllers\Api\MhsController::class, 'mhsDaftar']);
             Route::get('/mhs-diterima', [\App\Http\Controllers\Api\MhsController::class, 'mhsDiterima']);
             Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\MhsController::class, 'mhsPerProvinsi']);
+            Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\MhsController::class, 'mhsdDiterimaProvinsiFakultas']);
             Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\MhsController::class, 'mhsAktifNonFrs']);
             Route::get('/mhs-sudah-spp', [\App\Http\Controllers\Api\MhsController::class, 'mhsSudahBayarSpp']);
             Route::get('/mhs-belum-spp', [\App\Http\Controllers\Api\MhsController::class, 'mhsBelumBayarSpp']);

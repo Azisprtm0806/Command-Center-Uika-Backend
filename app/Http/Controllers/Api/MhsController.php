@@ -82,6 +82,30 @@ class MhsController extends Controller
       }
     }
 
+    public function mhsdDiterimaProvinsiFakultas(){
+      try {
+        $data = Pmb_Provinsi::leftJoin('pmb_candidate as c', 'pmb_provinsi.id', '=', 'c.prov_code')
+              ->leftJoin('pmb_registration as a', 'c.registration_no', '=', 'a.registration_no')
+              ->leftJoin('pmb_registration_payment as b', 'a.registration_no', '=', 'b.registration_no')
+              ->leftJoin('siak_department as d', 'd.code', '=', 'a.department_code')
+              ->leftJoin('siak_faculty as e', 'e.code', '=', 'd.faculty_code')
+              ->where('b.paid', 'Y')
+              ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+              ->where('a.academic_year', '2023/2024')
+              ->where('a.semester', 'GASAL')
+              ->groupBy('pmb_provinsi.id', 'pmb_provinsi.name', 'e.name')
+              ->orderBy('pmb_provinsi.name', 'ASC')
+              ->select('pmb_provinsi.name as provinsi', 'e.name as fakultas')
+              ->selectRaw('COUNT(a.registration_no) as total')
+              ->get();
+    
+
+          return new ApiResource(true, 'Mahasiswa Per Provinsi', $data);
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
     public function mhsAktifNonFrs(){
       try {
         $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'siak_department.name AS prodi', 'siak_student.class')
