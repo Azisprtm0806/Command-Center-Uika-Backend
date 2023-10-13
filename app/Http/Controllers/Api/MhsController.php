@@ -108,6 +108,8 @@ class MhsController extends Controller
 
     public function mhsAktifNonFrs(){
       try {
+        $perPage = 10;
+
         $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'siak_department.name AS prodi', 'siak_student.class')
           ->join('siak_fee_payment', 'siak_student.code', '=', 'siak_fee_payment.student_code')
           ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
@@ -121,7 +123,7 @@ class MhsController extends Controller
                   ->where('academic_year', '2023/2024')
                   ->where('semester', 'GASAL');
           })
-          ->get();
+          ->paginate($perPage);
 
           return new ApiResource(true, 'Mahasiswa Aktif yang Belum FRS', $data);
 
