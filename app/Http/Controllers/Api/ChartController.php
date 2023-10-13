@@ -250,7 +250,6 @@ class ChartController extends Controller
           }
     }
 
-
     public function jmlTunggakanPerProdi(){
       try {
         $data = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang'))
@@ -280,12 +279,12 @@ class ChartController extends Controller
             'series' => [
               [
                   'name' => 'Jumlah Tunggakan',
-                  'type' => 'column',
+                  'type' => 'area',
                   'data' => $dataTunggakan,
               ],
               [
                   'name' => 'Jumlah Mahasiswa',
-                  'type' => 'column',
+                  'type' => 'line',
                   'data' => $jml_mhs,
               ],
               
@@ -315,17 +314,14 @@ class ChartController extends Controller
 
 
           $dataTotalPengajar = [];
-          $dataKodeProdi = [];
           $labelProdi = [];
 
           foreach($data as $item){
             $prodi = $item['lookup_value'];
             $total = $item['total'];
-            $kode = $item['lookup_id'];
   
             $labelProdi[] = $prodi;
             $dataTotalPengajar[] = $total;
-            $dataKodeProdi[] = $kode;
           }
 
           $finalResponse = [
@@ -334,11 +330,6 @@ class ChartController extends Controller
                   'name' => 'Total Data Pengajar',
                   'type' => 'column',
                   'data' => $dataTotalPengajar,
-              ],
-              [
-                  'name' => 'Kode Program Studi',
-                  'type' => 'column',
-                  'data' => $dataKodeProdi,
               ],
               
           ],
@@ -353,4 +344,5 @@ class ChartController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
 }
