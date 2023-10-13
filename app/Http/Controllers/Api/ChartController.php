@@ -7,12 +7,13 @@ use App\Http\Resources\ApiResource;
 use App\Models\Pmb_Provinsi;
 use App\Models\Pmb_Registration;
 use App\Models\Siak_Departemen;
+use App\Models\Simpeg_Pegawai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ChartController extends Controller
 {
-    public function mhsDaftar(Request $request){
+    public function mhsChart(Request $request){
         $key = $request->key;
 
           try {
@@ -247,5 +248,109 @@ class ChartController extends Controller
           }catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
           }
+    }
+
+
+    public function jmlTunggakanPerProdi(){
+      try {
+        $data = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang'))
+          ->join('siak_student', 'siak_department.code', '=', 'siak_student.department_code')
+          ->join('siak_fee_payment', 'siak_fee_payment.student_code', '=', 'siak_student.code')
+          ->where('siak_fee_payment.academic_year', '2023/2024')
+          ->where('siak_fee_payment.semester', 'GASAL')
+          ->where('siak_fee_payment.paid', 'N')
+          ->groupBy('siak_department.code', 'siak_department.name')
+          ->get();
+
+          $dataTunggakan = [];
+          $jml_mhs = [];
+          $labelProdi = [];
+
+          foreach($data as $item){
+            $prodi = $item['prodi'];
+            $tunggakan = $item['total_piutang'];
+            $jmlMhs = $item['jml_mhs'];
+
+            $labelProdi[] = $prodi;
+            $dataTunggakan[] = $tunggakan;
+            $jml_mhs[] = $jmlMhs;
+          }
+
+          $finalResponse = [
+            'series' => [
+              [
+                  'name' => 'Jumlah Tunggakan',
+                  'type' => 'column',
+                  'data' => $dataTunggakan,
+              ],
+              [
+                  'name' => 'Jumlah Mahasiswa',
+                  'type' => 'column',
+                  'data' => $jml_mhs,
+              ],
+              
+          ],
+            
+            'label' => $labelProdi
+          ];
+
+  
+          return new ApiResource(true, 'Jumlah Tunggakan Mahasiswa Per Prodi', $finalResponse);
+    
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
+    public function jmlTenagaPengajarPerProdi(){
+      try {
+        $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', \DB::raw('COUNT(simpeg_pegawai.id) as total'))
+          ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+          ->where('adm_lookup.lookup_name', 'DIVISION')
+          ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+          ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+          ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+          ->groupBy('adm_lookup.lookup_id', 'adm_lookup.lookup_value')
+          ->get();
+
+
+          $dataTotalPengajar = [];
+          $dataKodeProdi = [];
+          $labelProdi = [];
+
+          foreach($data as $item){
+            $prodi = $item['lookup_value'];
+            $total = $item['total'];
+            $kode = $item['lookup_id'];
+  
+            $labelProdi[] = $prodi;
+            $dataTotalPengajar[] = $total;
+            $dataKodeProdi[] = $kode;
+          }
+
+          $finalResponse = [
+            'series' => [
+              [
+                  'name' => 'Total Data Pengajar',
+                  'type' => 'column',
+                  'data' => $dataTotalPengajar,
+              ],
+              [
+                  'name' => 'Kode Program Studi',
+                  'type' => 'column',
+                  'data' => $dataKodeProdi,
+              ],
+              
+          ],
+            
+            'label' => $labelProdi
+          ];
+
+  
+          return new ApiResource(true, 'Jumlah Tenaga Pengajar Perprodi', $finalResponse);
+  
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
     }
 }

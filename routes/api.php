@@ -32,7 +32,9 @@ Route::group(['prefix' => 'v1'], function(){
         });
 
         Route::prefix('/chart')->group(function (){
-            Route::get('/mhs-daftar', [\App\Http\Controllers\Api\ChartController::class, 'mhsDaftar']);
+            Route::get('/mhs-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsChart']);
+            Route::get('/tunggakanPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTunggakanPerProdi']);
+            Route::get('/tenagaPengajarPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTenagaPengajarPerProdi']);
         });
     });
 });
