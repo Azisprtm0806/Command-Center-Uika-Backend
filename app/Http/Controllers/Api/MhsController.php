@@ -31,10 +31,7 @@ class MhsController extends Controller
           ->select('e.name AS fakultas', 'd.name AS prodi', \DB::raw('COUNT(pmb_registration.registration_no) AS total'))
           ->get();
       
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
-
-
-          return new ApiResource(true, 'Mahasiswa Daftar', $dummyTable);
+          return Datatables::of($data)->addIndexColumn()->make(true);
           
         }catch (\Exception $e) {
           return response()->json(['error' => $e->getMessage()], 500);
@@ -58,10 +55,9 @@ class MhsController extends Controller
             ->select('e.name AS fakultas', 'd.name AS prodi', \DB::raw('COUNT(pmb_registration.registration_no) AS total'))
             ->get();
         
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
 
-            return new ApiResource(true, 'Mahasiswa diterima', $dummyTable);
       }catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
@@ -82,9 +78,8 @@ class MhsController extends Controller
         ->get();
     
 
-        $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+        return Datatables::of($data)->addIndexColumn()->make(true);
 
-          return new ApiResource(true, 'Mahasiswa Per Provinsi', $dummyTable);
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
@@ -107,10 +102,7 @@ class MhsController extends Controller
               ->selectRaw('COUNT(a.registration_no) as total')
               ->get();
     
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
-
-
-          return new ApiResource(true, 'Mahasiswa Per Provinsi', $dummyTable);
+          return Datatables::of($data)->addIndexColumn()->make(true);
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
@@ -154,10 +146,9 @@ class MhsController extends Controller
           ->where('siak_fee_payment.fee_item', '1020')
           ->get();
 
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
 
-          return new ApiResource(true, 'Mahasiswa yang sudah bayar SPP', $dummyTable);
 
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
@@ -175,10 +166,8 @@ class MhsController extends Controller
           ->where('siak_fee_payment.fee_item', '1020')
           ->get();
 
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
-
-        return new ApiResource(true, 'Mahasiswa yang belum bayar SPP', $dummyTable);
 
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
@@ -195,10 +184,7 @@ class MhsController extends Controller
           ->where('pmb_registration_beasiswa.academic_year', '2023/2024')
           ->get();
 
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
-
-
-        return new ApiResource(true, 'Mahasiswa penerima beasiswa', $dummyTable);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
@@ -217,10 +203,8 @@ class MhsController extends Controller
           ->where('pmb_registration.semester', 'GASAL')
           ->get();
 
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
-
-          return new ApiResource(true, 'Peta Sebaran Asal Mahasiswa', $dummyTable);
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }

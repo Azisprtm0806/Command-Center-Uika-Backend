@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
 use App\Models\Simpeg_Pegawai;
+use Yajra\Datatables\Datatables;
 use Illuminate\Http\Request;
 
 
@@ -21,7 +22,8 @@ class PegawaiController extends Controller
         ->groupBy('adm_lookup.lookup_id', 'adm_lookup.lookup_value')
         ->get();
 
-        return new ApiResource(true, 'Jumlah Tenaga Pengajar Perprodi', $data);
+        return Datatables::of($data)->addIndexColumn()->make(true);
+
 
     } catch (\Exception $e) {
       return response()->json(['error' => $e->getMessage()], 500);
@@ -38,7 +40,8 @@ class PegawaiController extends Controller
       ->groupBy('adm_lookup.lookup_id', 'adm_lookup.lookup_value')
       ->get();
 
-      return new ApiResource(true, 'Jumlah Tenaga Kerja Kependidikan.', $data);
+      return Datatables::of($data)->addIndexColumn()->make(true);
+
     } catch (\Exception $e) {
       return response()->json(['error' => $e->getMessage()], 500);
     }

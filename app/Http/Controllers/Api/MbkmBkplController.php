@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
 use App\Models\BkplPrograms;
+use Yajra\Datatables\Datatables;
 use Illuminate\Http\Request;
 
 
@@ -17,7 +18,8 @@ class MbkmBkplController extends Controller
       ->groupBy('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name')
       ->get();
 
-        return new ApiResource(true, 'Jumlah pelaksanaan MBKM Per bidang Per Prodi', $data);
+      return DataTables::of($data)->addIndexColumn()->make(true);
+
   
     } catch (\Exception $e) {
       return response()->json(['error' => $e->getMessage()], 500);

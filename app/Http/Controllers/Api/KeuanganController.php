@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
 use App\Models\Siak_Departemen;
+use Yajra\Datatables\Datatables;
+
 use Illuminate\Http\Request;
 
 
@@ -21,7 +23,8 @@ class KeuanganController extends Controller
         ->groupBy('siak_department.code', 'siak_department.name')
         ->get();
 
-        return new ApiResource(true, 'Jumlah Tunggakan Mahasiswa Per Prodi', $data);
+      return DataTables::of($data)->addIndexColumn()->make(true);
+
   
     } catch (\Exception $e) {
       return response()->json(['error' => $e->getMessage()], 500);
