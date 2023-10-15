@@ -126,9 +126,8 @@ class MhsController extends Controller
           })
           ->get();
 
-          $dummyTable = Datatables::of($data)->addIndexColumn()->make(true);
+          return Datatables::of($data)->addIndexColumn()->make(true);
 
-          return new ApiResource(true, 'Mahasiswa Aktif yang Belum FRS', $dummyTable);
 
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
