@@ -35,6 +35,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/mhs-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsChart']);
             Route::get('/tunggakanPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTunggakanPerProdi']);
             Route::get('/tenagaPengajarPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTenagaPengajarPerProdi']);
+            Route::get('/mbkmbkpl', [\App\Http\Controllers\Api\ChartController::class, 'jmlMbkmBkpl']);
         });
     });
 });

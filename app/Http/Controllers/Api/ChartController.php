@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
+use App\Models\BkplPrograms;
 use App\Models\Pmb_Provinsi;
 use App\Models\Pmb_Registration;
 use App\Models\Siak_Departemen;
+use App\Models\Siak_Student;
 use App\Models\Simpeg_Pegawai;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -250,56 +252,157 @@ class ChartController extends Controller
           }
     }
 
-    public function jmlTunggakanPerProdi(){
-      try {
-        $data = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang'))
-          ->join('siak_student', 'siak_department.code', '=', 'siak_student.department_code')
-          ->join('siak_fee_payment', 'siak_fee_payment.student_code', '=', 'siak_student.code')
-          ->where('siak_fee_payment.academic_year', '2023/2024')
-          ->where('siak_fee_payment.semester', 'GASAL')
-          ->where('siak_fee_payment.paid', 'N')
-          ->groupBy('siak_department.code', 'siak_department.name')
-          ->get();
+  //   public function jmlTunggakanSpp() {
+  //     try {
+  //         // Query untuk menghitung jumlah tunggakan dan jumlah mahasiswa per prodi
+  //         $dataTunggakan = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang'))
+  //             ->join('siak_student', 'siak_department.code', '=', 'siak_student.department_code')
+  //             ->join('siak_fee_payment', 'siak_fee_payment.student_code', '=', 'siak_student.code')
+  //             ->where('siak_fee_payment.academic_year', '2023/2024')
+  //             ->where('siak_fee_payment.semester', 'GASAL')
+  //             ->where('siak_fee_payment.paid', 'N')
+  //             ->groupBy('siak_department.code', 'siak_department.name')
+  //             ->get();
+  
+  //         // Inisialisasi array untuk data tunggakan dan jumlah mahasiswa
+  //         $dataTunggakanArray = [];
+  //         $jmlMhsArray = [];
+  //         $labelProdi = [];
+  
+  //         // Loop melalui data tunggakan per prodi
+  //         foreach ($dataTunggakan as $item) {
+  //             $prodi = $item['prodi'];
+  //             $tunggakan = $item['total_piutang'];
+  //             $jmlMhs = $item['jml_mhs'];
+  
+  //             $labelProdi[] = $prodi;
+  //             $dataTunggakanArray[] = $tunggakan;
+  //             $jmlMhsArray[] = $jmlMhs;
+  //         }
+  
+  //         // Query untuk menghitung jumlah tunggakan SPP per prodi
+  //         $dataTunggakanSPP = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang_spp'))
+  //             ->join('siak_student', 'siak_department.code', '=', 'siak_student.department_code')
+  //             ->join('siak_fee_payment', 'siak_fee_payment.student_code', '=', 'siak_student.code')
+  //             ->where('siak_fee_payment.academic_year', '2023/2024')
+  //             ->where('siak_fee_payment.semester', 'GASAL')
+  //             ->where('siak_fee_payment.paid', 'N')
+  //             ->where('siak_fee_payment.fee_item', '1020')
+  //             ->groupBy('siak_department.code', 'siak_department.name')
+  //             ->get();
+  
+  //         // Inisialisasi array untuk data tunggakan SPP per prodi
+  //         $dataTunggakanSPPArray = [];
+  
+  //         // Loop melalui data tunggakan SPP per prodi
+  //         foreach ($dataTunggakanSPP as $item) {
+  //             $tunggakanSPP = $item['total_piutang_spp'];
+  //             $dataTunggakanSPPArray[] = $tunggakanSPP;
+  //         }
+  
+  //         // Membuat respons akhir dengan menggabungkan data tunggakan, jumlah mahasiswa, dan tunggakan SPP
+  //         $finalResponse = [
+  //             'series' => [
+  //                 [
+  //                     'name' => 'Jumlah Tunggakan',
+  //                     'type' => 'area',
+  //                     'data' => $dataTunggakanArray,
+  //                 ],
+  //                 [
+  //                     'name' => 'Jumlah Mahasiswa',
+  //                     'type' => 'line',
+  //                     'data' => $jmlMhsArray,
+  //                 ],
+  //                 [
+  //                     'name' => 'Jumlah Tunggakan SPP Per Prodi',
+  //                     'type' => 'area',
+  //                     'data' => $dataTunggakanSPPArray,
+  //                 ],
+  //             ],
+  //             'label' => $labelProdi,
+  //         ];
+  
+  //         return new ApiResource(true, 'Jumlah Tunggakan Mahasiswa Per Prodi', $finalResponse);
+  //     } catch (\Exception $e) {
+  //         return response()->json(['error' => $e->getMessage()], 500);
+  //     }
+  // }
+  
 
+    public function jmlTunggakanPerProdi() {
+      try {
+          // Query pertama untuk menghitung total nominal tunggakan per prodi
+          $tunggakanPerProdi = Siak_Departemen::select('siak_department.name as prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_piutang'))
+              ->join('siak_student', 'siak_department.code', '=', 'siak_student.department_code')
+              ->join('siak_fee_payment', 'siak_fee_payment.student_code', '=', 'siak_student.code')
+              ->where('siak_fee_payment.academic_year', '2023/2024')
+              ->where('siak_fee_payment.semester', 'GASAL')
+              ->where('siak_fee_payment.paid', 'N')
+              ->groupBy('siak_department.code', 'siak_department.name')
+              ->get();
+  
+          // Query kedua untuk mendapatkan data mahasiswa yang memiliki tunggakan SPP per prodi
+          $mahasiswaTunggakan = Siak_Student::select('siak_department.name AS prodi', \DB::raw('COUNT(siak_student.code) as jml_mhs'), \DB::raw('SUM(siak_fee_payment.nominal) as total_tunggakan_spp'))
+              ->join('siak_fee_payment', 'siak_student.code', '=', 'siak_fee_payment.student_code')
+              ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+              ->where('siak_fee_payment.academic_year', '2023/2024')
+              ->where('siak_fee_payment.semester', 'GASAL')
+              ->where('siak_fee_payment.paid', 'N')
+              ->groupBy('siak_department.code', 'siak_department.name')
+              ->get();
+  
           $dataTunggakan = [];
           $jml_mhs = [];
           $labelProdi = [];
-
-          foreach($data as $item){
-            $prodi = $item['prodi'];
-            $tunggakan = $item['total_piutang'];
-            $jmlMhs = $item['jml_mhs'];
-
-            $labelProdi[] = $prodi;
-            $dataTunggakan[] = $tunggakan;
-            $jml_mhs[] = $jmlMhs;
+          $tunggakanSppProdi = [];
+  
+          foreach ($tunggakanPerProdi as $item) {
+              $prodi = $item['prodi'];
+              $tunggakan = $item['total_piutang'];
+              $jmlMhs = $item['jml_mhs'];
+  
+              $labelProdi[] = $prodi;
+              $dataTunggakan[] = $tunggakan;
+              $jml_mhs[] = $jmlMhs;
           }
-
+  
+          foreach ($mahasiswaTunggakan as $item) {
+              $prodi = $item['prodi'];
+              $tunggakan = $item['total_tunggakan_spp'];
+  
+              $tunggakanSppProdi[] = $tunggakan;
+          }
+  
           $finalResponse = [
-            'series' => [
-              [
-                  'name' => 'Jumlah Tunggakan',
-                  'type' => 'area',
-                  'data' => $dataTunggakan,
+              'series' => [
+                  [
+                      'name' => 'Jumlah Tunggakan',
+                      'type' => 'area',
+                      'data' => $dataTunggakan,
+                  ],
+                  [
+                      'name' => 'Jumlah Mahasiswa',
+                      'type' => 'line',
+                      'data' => $jml_mhs,
+                  ],
+                  [
+                      'name' => 'Jumlah Tunggakan SPP Per Prodi',
+                      'type' => 'area',
+                      'data' => $tunggakanSppProdi,
+                  ],
               ],
-              [
-                  'name' => 'Jumlah Mahasiswa',
-                  'type' => 'line',
-                  'data' => $jml_mhs,
-              ],
-              
-          ],
-            
-            'label' => $labelProdi
+  
+              'label' => $labelProdi,
+              'labelTunggakanSppProdi' => $labelProdi,
           ];
-
   
           return new ApiResource(true, 'Jumlah Tunggakan Mahasiswa Per Prodi', $finalResponse);
-    
+  
       } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+          return response()->json(['error' => $e->getMessage()], 500);
       }
-    }
+  }
+  
 
     public function jmlTenagaPengajarPerProdi(){
       try {
@@ -340,6 +443,78 @@ class ChartController extends Controller
   
           return new ApiResource(true, 'Jumlah Tenaga Pengajar Perprodi', $finalResponse);
   
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
+    public function jmlMbkmBkpl(Request $request){
+      try {
+        $academicYear = $request->tahun_akademik; 
+
+        $data = BkplPrograms::select('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name', \DB::raw('COUNT(bkpl_events.id) as total'))
+            ->join('bkpl_events', 'bkpl_programs.code', '=', 'bkpl_events.program')
+            ->where('bkpl_events.academic_year', $academicYear) 
+            ->groupBy('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name')
+            ->get();
+        
+        $genapData = [];
+        $gasalData = [];
+        $labels = [];
+        
+        $programData = [];
+        
+        foreach ($data as $item) {
+            $semester = $item['semester'];
+            $total = $item['total'];
+            $name = $item['name'];
+        
+            if (!isset($programData[$name])) {
+                $programData[$name] = [
+                    'name' => $name,
+                    'genap' => 0,
+                    'gasal' => 0,
+                ];
+            }
+        
+            if ($semester == 'GENAP') {
+                $programData[$name]['genap'] = $total;
+            } elseif ($semester == 'GASAL') {
+                $programData[$name]['gasal'] = $total;
+            }
+        
+            if (!in_array($name, $labels)) {
+                $labels[] = $name;
+            }
+        }
+        
+        foreach ($labels as $name) {
+            $genapData[] = $programData[$name]['genap'];
+            $gasalData[] = $programData[$name]['gasal'];
+        }
+        
+        $finalResponse = [
+            'series' => [
+                [
+                    'name' => 'Genap',
+                    'type' => 'column',
+                    'data' => $genapData,
+                ],
+                [
+                    'name' => 'Gasal',
+                    'type' => 'column',
+                    'data' => $gasalData,
+                ],
+            ],
+            'label' => $labels,
+        ];
+        
+        return $finalResponse;
+        
+
+
+
+
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }

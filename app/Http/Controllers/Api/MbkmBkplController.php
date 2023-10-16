@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResource;
 use App\Models\BkplPrograms;
 use Yajra\Datatables\Datatables;
-use Illuminate\Http\Request;
 
+use Illuminate\Http\Request;
 
 class MbkmBkplController extends Controller
 {
@@ -18,7 +18,8 @@ class MbkmBkplController extends Controller
       ->groupBy('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name')
       ->get();
 
-      return DataTables::of($data)->addIndexColumn()->make(true);
+      return Datatables::of($data)->addIndexColumn()->make(true);
+
 
   
     } catch (\Exception $e) {
