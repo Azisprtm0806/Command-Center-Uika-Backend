@@ -7,24 +7,34 @@ use Illuminate\Support\Facades\Route;
 Route::group(['prefix' => 'v1'], function(){
     Route::prefix('/cc')->group(function (){
         Route::prefix('/mhs')->group(function (){
-            Route::get('/mhs-daftar', [\App\Http\Controllers\Api\MhsController::class, 'mhsDaftar']);
-            Route::get('/mhs-diterima', [\App\Http\Controllers\Api\MhsController::class, 'mhsDiterima']);
-            Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\MhsController::class, 'mhsPerProvinsi']);
-            Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\MhsController::class, 'mhsdDiterimaProvinsiFakultas']);
-            Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\MhsController::class, 'mhsAktifNonFrs']);
-            Route::get('/mhs-sudah-spp', [\App\Http\Controllers\Api\MhsController::class, 'mhsSudahBayarSpp']);
-            Route::get('/mhs-belum-spp', [\App\Http\Controllers\Api\MhsController::class, 'mhsBelumBayarSpp']);
-            Route::get('/mhs-beasiswa', [\App\Http\Controllers\Api\MhsController::class, 'MhsPenerimaBeasiswa']);
-            Route::get('/asal-mhs', [\App\Http\Controllers\Api\MhsController::class, 'AsalMhs']);
+            Route::get('/mhs-daftar', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDaftar']);
+            Route::get('/mhs-diterima', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDiterima']);
+            Route::get('/rata-ipk-prodi', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerProdi']);
+            Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPerProvinsi']);
+            Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'mhsdDiterimaProvinsiFakultas']);
+            Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\AkademikController::class, 'mhsAktifNonFrs']);
+            Route::get('/mhs-sudah-spp', [\App\Http\Controllers\Api\AkademikController::class, 'mhsSudahBayarSpp']);
+            Route::get('/mhs-belum-spp', [\App\Http\Controllers\Api\AkademikController::class, 'mhsBelumBayarSpp']);
+            Route::get('/mhs-beasiswa', [\App\Http\Controllers\Api\AkademikController::class, 'MhsPenerimaBeasiswa']);
+            Route::get('/mhs-lulus-beasiswa', [\App\Http\Controllers\Api\AkademikController::class, 'mhsLulusBeasiswa']);
+            Route::get('/asal-mhs', [\App\Http\Controllers\Api\AkademikController::class, 'AsalMhs']);
+            Route::get('/peta-sebaran-newMhs', [\App\Http\Controllers\Api\AkademikController::class, 'petaSebaranNewMhs']);
+            Route::get('/peta-sebaran-oldMhs', [\App\Http\Controllers\Api\AkademikController::class, 'petaSebaranOldMhs']);
         });
 
         Route::prefix('/pegawai')->group(function (){
             Route::get('/jmlh-pengajar-prodi', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaPengajarPerProdi']);
             Route::get('/jmlh-kependidikan', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaKependidikan']);
+            Route::get('/jmlh-pengajar-dosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaPengajarDosen']);
+            Route::get('/jafungDosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jafungDosen']);
+            Route::get('/struktural', [\App\Http\Controllers\Api\PegawaiController::class, 'struktural']);
+            Route::get('/jml-tendik', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTendik']);
         });
 
         Route::prefix('/keuangan')->group(function (){
-            Route::get('/tunggakan-mhs-prodi', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsPerProdi']);
+            Route::get('/tunggakan-mhs', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhs']);
+            Route::get('/tunggakan-mhs-spp', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSpp']);
+            Route::get('/tunggakan-mhs-sks-ujian', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSksUjian']);
         });
 
         Route::prefix('/mbkm-bkpl')->group(function (){
