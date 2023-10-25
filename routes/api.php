@@ -10,6 +10,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/mhs-daftar', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDaftar']);
             Route::get('/mhs-diterima', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDiterima']);
             Route::get('/rata-ipk-prodi', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerProdi']);
+            Route::get('/rata-ipk-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerFakultas']);
             Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPerProvinsi']);
             Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'mhsdDiterimaProvinsiFakultas']);
             Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\AkademikController::class, 'mhsAktifNonFrs']);
@@ -23,8 +24,8 @@ Route::group(['prefix' => 'v1'], function(){
         });
 
         Route::prefix('/pegawai')->group(function (){
-            Route::get('/jmlh-pengajar-prodi', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaPengajarPerProdi']);
-            Route::get('/jmlh-kependidikan', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaKependidikan']);
+            Route::get('/total-pengajar-dosen', [\App\Http\Controllers\Api\PegawaiController::class, 'totalTenagaPengajarPerProdi']);
+            Route::get('/total-tendik', [\App\Http\Controllers\Api\PegawaiController::class, 'totalTendik']);
             Route::get('/jmlh-pengajar-dosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaPengajarDosen']);
             Route::get('/jafungDosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jafungDosen']);
             Route::get('/struktural', [\App\Http\Controllers\Api\PegawaiController::class, 'struktural']);
@@ -44,8 +45,12 @@ Route::group(['prefix' => 'v1'], function(){
         Route::prefix('/chart')->group(function (){
             Route::get('/mhs-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsChart']);
             Route::get('/tunggakanPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTunggakanPerProdi']);
-            Route::get('/tenagaPengajarPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTenagaPengajarPerProdi']);
+            Route::get('/pegawai-chart', [\App\Http\Controllers\Api\ChartController::class, 'kepegawain']);
+            Route::get('/struktural-chart', [\App\Http\Controllers\Api\ChartController::class, 'strukturalChart']);
             Route::get('/mbkmbkpl', [\App\Http\Controllers\Api\ChartController::class, 'jmlMbkmBkpl']);
+            Route::get('/beasiswa-chart', [\App\Http\Controllers\Api\ChartController::class, 'beasiswaChart']);
+            Route::get('/mhs-spp-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsSppChart']);
+            Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk']);
         });
     });
 });

@@ -72,20 +72,38 @@ class AkademikController extends Controller
     public function ipkPerProdi(Request $request){
       try {
           $data = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', \DB::raw('SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total'))
-      ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
-      ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
-      ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN ('19','20','21','22')")
-      ->where('siak_student_academic_snapshot.academic_year', '2022/2023')
-      ->where('siak_student_academic_snapshot.semester', 'GENAP')
-      ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
-      ->orderBy('siak_department.code')
-      ->orderBy('siak_student_academic_snapshot.academic_year', 'asc')
-      ->get();
-
-    
-
+            ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
+            ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+            ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN ('19','20','21','22')")
+            ->where('siak_student_academic_snapshot.academic_year', '2022/2023')
+            ->where('siak_student_academic_snapshot.semester', 'GENAP')
+            ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
+            ->orderBy('siak_department.code')
+            ->orderBy('siak_student_academic_snapshot.academic_year', 'asc')
+            ->get();
         
-          return Datatables::of($data)->addIndexColumn()->make(true);
+        return Datatables::of($data)->addIndexColumn()->make(true);
+      }catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+    
+    public function ipkPerFakultas(Request $request){
+      try {
+        $data = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', DB::raw("SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total"))
+        ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
+        ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+        ->whereIn(DB::raw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2)"), ['19', '20', '21', '22'])
+        ->where('siak_student_academic_snapshot.academic_year', '2022/2023')
+        ->where('siak_student_academic_snapshot.semester', 'GENAP')
+        ->where('siak_department.faculty_code', 'FT')
+        ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
+        ->orderBy('siak_department.code')
+        ->orderBy('siak_student_academic_snapshot.academic_year')
+        ->get();
+    
+        
+        return Datatables::of($data)->addIndexColumn()->make(true);
       }catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
