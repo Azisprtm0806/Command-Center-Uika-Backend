@@ -747,13 +747,71 @@ class ChartController extends Controller
 
     public function jmlMbkmBkpl(Request $request){
       try {
-        return response()->json(['message' => 'Masih Bingung Mau data Apa saja Yang di masukin ke chart, untuk datanya ada di folder MBKM | BKPL ']);
+        $academicYear = $request->tahun_akademik; 
 
+        $data = BkplPrograms::select('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name', \DB::raw('COUNT(bkpl_events.id) as total'))
+            ->join('bkpl_events', 'bkpl_programs.code', '=', 'bkpl_events.program')
+            ->where('bkpl_events.academic_year', $academicYear) 
+            ->groupBy('bkpl_events.academic_year', 'bkpl_events.semester', 'bkpl_programs.name')
+            ->get();
+
+        $genapData = [];
+        $gasalData = [];
+        $labels = [];
+
+        $programData = [];
+
+        foreach ($data as $item) {
+            $semester = $item['semester'];
+            $total = $item['total'];
+            $name = $item['name'];
+
+            if (!isset($programData[$name])) {
+                $programData[$name] = [
+                    'name' => $name,
+                    'genap' => 0,
+                    'gasal' => 0,
+                ];
+            }
+
+            if ($semester == 'GENAP') {
+                $programData[$name]['genap'] = $total;
+            } elseif ($semester == 'GASAL') {
+                $programData[$name]['gasal'] = $total;
+            }
+
+            if (!in_array($name, $labels)) {
+                $labels[] = $name;
+            }
+        }
+
+        foreach ($labels as $name) {
+            $genapData[] = $programData[$name]['genap'];
+            $gasalData[] = $programData[$name]['gasal'];
+        }
+
+        $finalResponse = [
+            'series' => [
+                [
+                    'name' => 'Genap',
+                    'type' => 'column',
+                    'data' => $genapData,
+                ],
+                [
+                    'name' => 'Gasal',
+                    'type' => 'column',
+                    'data' => $gasalData,
+                ],
+            ],
+            'label' => $labels,
+        ];
+
+        return $finalResponse;
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-
+    
     public function beasiswaChart(Request $request){
       $key = $request->key;
 
@@ -923,7 +981,7 @@ class ChartController extends Controller
             $finalResponse = [
                 'series' => [
                     [
-                        'name' => 'Total Mahasiswa Yang Sudah Bayar SPP Per Prodi',
+                        'name' => 'Data IPK Mahasiswa Per Prodi',
                         'type' => 'column',
                         'data' => $ipkData,
                     ],

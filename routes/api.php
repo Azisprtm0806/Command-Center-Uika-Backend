@@ -40,6 +40,7 @@ Route::group(['prefix' => 'v1'], function(){
 
         Route::prefix('/mbkm-bkpl')->group(function (){
             Route::get('/pelaksanaan', [\App\Http\Controllers\Api\MbkmBkplController::class, 'pelaksanaan']);
+            Route::get('/total-pelaksanaan', [\App\Http\Controllers\Api\MbkmBkplController::class, 'totalJmlPelaksanaan']);
         });
 
         Route::prefix('/chart')->group(function (){

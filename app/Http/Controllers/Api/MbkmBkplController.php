@@ -12,6 +12,22 @@ use Illuminate\Http\Request;
 
 class MbkmBkplController extends Controller
 {
+
+  public function totalJmlPelaksanaan(){
+    try {
+      $data = BkplPrograms::select('bkpl_programs.code', 'bkpl_programs.name')
+      ->selectRaw('COUNT(bkpl_events.id) as total')
+      ->join('bkpl_events', 'bkpl_events.program', '=', 'bkpl_programs.code')
+      ->groupBy('bkpl_programs.code', 'bkpl_programs.name')
+      ->get();
+
+      return Datatables::of($data)->addIndexColumn()->make(true);
+    } catch (\Exception $e) {
+      return response()->json(['error' => $e->getMessage()], 500);
+    }
+  }
+
+  
   public function pelaksanaan(){
     try {
       $data = Bkpl_Event::select('bkpl_events.academic_year', 'bkpl_events.semester', 'siak_department.name AS prodi', 'bkpl_events.program', 'bp1.name', 'bkpl_events.event_name')
@@ -28,5 +44,4 @@ class MbkmBkplController extends Controller
     }
   }
 }
-
 
