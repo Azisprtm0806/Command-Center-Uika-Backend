@@ -328,7 +328,6 @@ class AkademikController extends Controller
           ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
           ->where('a.academic_year', $tahunAkademik)
           ->where('a.semester', 'GASAL')
-          ->take(10)
           ->get();
 
           foreach ($data as $item) {
@@ -350,7 +349,6 @@ class AkademikController extends Controller
             ->join('pmb_desa', 'pmb_desa.id', '=', 'pmb_candidate.desa_code')
             ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
             ->where('pmb_registration.registration_no', '!=', $tahunAkademik)
-            ->take(10)
             ->get();
           foreach ($data as $item) {
             if (empty($item->latitude) || empty($item->longitude)) {
