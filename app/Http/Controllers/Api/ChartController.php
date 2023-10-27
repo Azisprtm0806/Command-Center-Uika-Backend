@@ -966,7 +966,7 @@ class ChartController extends Controller
                         'data' => $totalDataJafung,
                     ],
                 ],
-                'label jafung' => $jabatanFungsional,
+                'label' => $jabatanFungsional,
             ];
     
             return new ApiResource(true, 'Chart Jafung', $finalResponse);
