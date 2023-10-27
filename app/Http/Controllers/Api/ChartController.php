@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\DB;
 
 class ChartController extends Controller
 {
-
     public function mhsChart(Request $request){
       $key = $request->key;
       $tahunAkademik = $request->tahun_akademik;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pmb_Candidate;
+use App\Models\Pmb_Desa;
 use App\Models\Pmb_Provinsi;
 use App\Models\Pmb_Registration;
 use App\Models\Siak_Student;
@@ -381,7 +382,7 @@ class AkademikController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-    
+
     public function dataOldMhs(){
       try {
         $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
@@ -445,11 +446,10 @@ class AkademikController extends Controller
         return response()->json(['message' => 'tahun_akademik param required.']);
       }
 
-      
       try {
         if($key == 'new'){
           $data = DB::table('pmb_registration as a')
-          ->select('a.*', 'e.name as prodi', 'd.name', 'c.address', 'd.latitude', 'd.longitude')
+          ->select('a.*', 'e.name as prodi', 'd.name', 'c.address')
           ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
           ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
           ->join('pmb_desa as d', 'd.id', '=', 'c.desa_code')
@@ -459,20 +459,27 @@ class AkademikController extends Controller
           ->where('a.academic_year', $tahunAkademik)
           ->where('a.semester', 'GASAL')
           ->get();
-
-          foreach ($data as $item) {
-            if (empty($item->latitude) || empty($item->longitude)) {
-                $geocodedData = $this->geocodeAddress($item->name);
-
-                if ($geocodedData) {
-                    $item->latitude = $geocodedData['latitude'];
-                    $item->longitude = $geocodedData['longitude'];
-                }
-
-            }
+      
+          $jsonData = json_decode(file_get_contents(storage_path('latlon/desa_latlong.json')), true);
+          
+          $newData = [];
+          
+          foreach ($data as $row) {
+              $nameToMatch = $row->name;
+              $matchingData = array_filter($jsonData, function ($item) use ($nameToMatch) {
+                  return $item['name'] === $nameToMatch;
+              });
+          
+              if (!empty($matchingData)) {
+                  $matchingData = reset($matchingData);
+                  $row->latitude = $matchingData['latitude'];
+                  $row->longitude = $matchingData['longitude'];
+              }
+          
+              $newData[] = (array) $row; 
           }
-  
-          return Datatables::of($data)->addIndexColumn()->make(true);
+          
+          return Datatables::of($newData)->addIndexColumn()->make(true);
         } else if($key == 'old') {
           $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
             ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
@@ -481,19 +488,38 @@ class AkademikController extends Controller
             ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
             ->where('pmb_registration.registration_no', '!=', $tahunAkademik)
             ->get();
-          foreach ($data as $item) {
-            if (empty($item->latitude) || empty($item->longitude)) {
-                $geocodedData = $this->geocodeAddress($item->desa);
-
-                if ($geocodedData) {
-                    $item->latitude = $geocodedData['latitude'];
-                    $item->longitude = $geocodedData['longitude'];
+                
+            $jsonData = json_decode(file_get_contents(storage_path('latlon/desa_latlong.json')), true);
+          
+            $oldData = [];
+            
+            foreach ($data as $row) {
+                $desaToMatch = $row->desa;
+                $matchingData = array_filter($jsonData, function ($item) use ($desaToMatch) {
+                    return $item['name'] === $desaToMatch;
+                });
+            
+                if (!empty($matchingData)) {
+                    $matchingData = reset($matchingData);
+                    $row->latitude = $matchingData['latitude'];
+                    $row->longitude = $matchingData['longitude'];
                 }
+            
+                    $oldData[] = [
+                      'code' => $row->code,
+                      'name' => $row->name,
+                      'sex' => $row->sex,
+                      'address' => $row->address,
+                      'city' => $row->city,
+                      'desa' => $row->desa,
+                      'prodi' => $row->prodi,
+                      'status' => $row->status,
+                      'latitude' => $row->latitude,
+                      'longitude' => $row->longitude,
+                  ];
             }
-          }
-  
-          return Datatables::of($data)->addIndexColumn()->make(true);
-
+            
+            return Datatables::of($oldData)->addIndexColumn()->make(true);
         } else {
           return response()->json(['message' => 'value key param not allowed. must be [new, old]' ]);
         }
@@ -521,26 +547,42 @@ class AkademikController extends Controller
       try {
         if($key == 'new'){
           $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
-          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
-          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
-          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
-          ->where('pmb_registration.academic_year', $tahunAkademik)
-          ->where('pmb_registration.semester', $semester)
-          ->get();
+            ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+            ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+            ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+            ->where('pmb_registration.academic_year', $tahunAkademik)
+            ->where('pmb_registration.semester', $semester)
+            ->get();
 
-          foreach ($data as $item) {
-            if (empty($item->latitude) || empty($item->longitude)) {
-                $geocodedData = $this->geocodeAddress($item->address_sekolah);
+            $jsonData = json_decode(file_get_contents(storage_path('latlon/asal_sekolah_latlong.json')), true);
 
-                if ($geocodedData) {
-                    $item->latitude = $geocodedData['latitude'];
-                    $item->longitude = $geocodedData['longitude'];
+            $newData = [];
+
+            foreach ($data as $row) {
+                $addressToMatch = $row->address_sekolah;
+                $matchingData = array_filter($jsonData, function ($item) use ($addressToMatch) {
+                    return $item['name'] === $addressToMatch;
+                });
+
+                if (!empty($matchingData)) {
+                    $matchingData = reset($matchingData);
+                    $row->latitude = $matchingData['latitude'];
+                    $row->longitude = $matchingData['longitude'];
                 }
 
-            }
-          }
-  
-          return Datatables::of($data)->addIndexColumn()->make(true);
+                $newData[] = [
+                    'registration_no' => $row->registration_no,
+                    'candidate_name' => $row->candidate_name,
+                    'sex' => $row->sex,
+                    'nama_sekolah' => $row->nama_sekolah,
+                    'address_sekolah' => $row->address_sekolah,
+                    'latitude' => $row->latitude ?? '', 
+                    'longitude' => $row->longitude ?? '', 
+                ];
+              }
+
+            return Datatables::of($newData)->addIndexColumn()->make(true);
+
         } else if($key == 'old') {
           $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
           ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
@@ -550,19 +592,34 @@ class AkademikController extends Controller
           ->where('pmb_registration.semester', $semester)
           ->get();
 
-          foreach ($data as $item) {
-            if (empty($item->latitude) || empty($item->longitude)) {
-                $geocodedData = $this->geocodeAddress($item->address_sekolah);
+          $jsonData = json_decode(file_get_contents(storage_path('latlon/asal_sekolah_latlong.json')), true);
 
-                if ($geocodedData) {
-                    $item->latitude = $geocodedData['latitude'];
-                    $item->longitude = $geocodedData['longitude'];
-                }
+          $oldData = [];
+
+          foreach ($data as $row) {
+              $addressToMatch = $row->address_sekolah;
+              $matchingData = array_filter($jsonData, function ($item) use ($addressToMatch) {
+                  return $item['name'] === $addressToMatch;
+              });
+
+              if (!empty($matchingData)) {
+                  $matchingData = reset($matchingData);
+                  $row->latitude = $matchingData['latitude'];
+                  $row->longitude = $matchingData['longitude'];
+              }
+
+              $oldData[] = [
+                  'registration_no' => $row->registration_no,
+                  'candidate_name' => $row->candidate_name,
+                  'sex' => $row->sex,
+                  'nama_sekolah' => $row->nama_sekolah,
+                  'address_sekolah' => $row->address_sekolah,
+                  'latitude' => $row->latitude ?? '', 
+                  'longitude' => $row->longitude ?? '', 
+              ];
             }
-          }
-  
-          return Datatables::of($data)->addIndexColumn()->make(true);
 
+          return Datatables::of($oldData)->addIndexColumn()->make(true);
         } else {
           return response()->json(['message' => 'value key param not allowed. must be [new, old]' ]);
         }
@@ -572,7 +629,151 @@ class AkademikController extends Controller
       }
     }
     
-    private function geocodeAddress($address) {
+
+
+
+
+
+
+
+
+
+
+
+    // =======================================================================
+    // =======================================================================
+  
+
+    // FUNGSI DI BAWAH UNTUK MENDAPATKAN DATA LATLONG DESA
+    public function latlongDesa(Request $request){  
+      try {
+        $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
+        ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
+        ->join('pmb_registration', 'pmb_registration.registration_no', '=', 'pmb_candidate.registration_no')
+        ->join('pmb_desa', 'pmb_desa.id', '=', 'pmb_candidate.desa_code')
+        ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+        ->where('pmb_registration.registration_no', '!=', '2023/2024')
+        ->get();
+  
+  
+          foreach ($data as $item) {
+              if (empty($item->latitude) || empty($item->longitude)) {
+                  $existingData = $this->getExistingData($item->desa);
+  
+                  if (!$existingData) {
+                      $geocodedData = $this->geocodeAddressTest($item->desa);
+  
+                      if ($geocodedData) {
+                          $item->latitude = $geocodedData['latitude'];
+                          $item->longitude = $geocodedData['longitude'];
+                          $this->updateLatLongInDatabase($item->desa, $geocodedData['latitude'], $geocodedData['longitude']);
+                      }
+                  }
+              }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+  
+    private function updateLatLongInDatabase($name, $latitude, $longitude) {
+        $data = [];
+    
+        $filePath = storage_path('latlon/desa_latlong.json');
+    
+        if (file_exists($filePath)) {
+            $jsonData = file_get_contents($filePath);
+            $data = json_decode($jsonData, true);
+        }
+    
+        $data[] = [
+            'name' => $name,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
+    
+        $jsonData = json_encode($data);
+        file_put_contents($filePath, $jsonData);
+    }
+    
+    // FUNGSI DI BAWAH UNTUK MENDAPATKAN DATA LATLONG ASAL SEKOLAH
+    public function latlongAsalSekolah(Request $request){  
+      try {
+        $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
+          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+          ->where('pmb_registration.academic_year', '2023/2024')
+          ->where('pmb_registration.semester', 'GASAL')
+          ->get();
+  
+  
+          foreach ($data as $item) {
+              if (empty($item->latitude) || empty($item->longitude)) {
+                  $existingData = $this->validateData($item->address_sekolah);
+  
+                  if (!$existingData) {
+                      $geocodedData = $this->geocodeAddressTest($item->address_sekolah);
+  
+                      if ($geocodedData) {
+                          $item->latitude = $geocodedData['latitude'];
+                          $item->longitude = $geocodedData['longitude'];
+                          $this->saveLatLongAsalSekolah($item->address_sekolah, $geocodedData['latitude'], $geocodedData['longitude']);
+                      }
+                  }
+              }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
+    private function saveLatLongAsalSekolah($name, $latitude, $longitude) {
+      $data = [];
+  
+      $filePath = storage_path('latlon/asal_sekolah_latlong.json');
+  
+      if (file_exists($filePath)) {
+          $jsonData = file_get_contents($filePath);
+          $data = json_decode($jsonData, true);
+      }
+  
+      $data[] = [
+          'name' => $name,
+          'latitude' => $latitude,
+          'longitude' => $longitude,
+      ];
+  
+      $jsonData = json_encode($data);
+      file_put_contents($filePath, $jsonData);
+    }
+
+    private function validateData($name) {
+      $filePath = storage_path('latlon/asal_sekolah_latlong.json');
+      
+      if (file_exists($filePath)) {
+          $jsonData = file_get_contents($filePath);
+          $data = json_decode($jsonData, true);
+
+          if (is_array($data)) {
+              foreach ($data as $item) {
+                  // Check if the 'name' matches the provided name
+                  if (isset($item['name']) && $item['name'] === $name) {
+                      return $item;
+                  }
+              }
+          }
+      }
+
+      return null;
+    }
+
+  // ----------------------------------------------------------------------------
+    private function geocodeAddressTest($address) {
       $encodedAddress = urlencode($address);
   
       $response = Http::get("https://nominatim.openstreetmap.org/search?format=json&q={$encodedAddress}&format=json&addressdetails=1&limit=1");
@@ -582,7 +783,7 @@ class AkademikController extends Controller
           if (count($data) > 0) {
               $latitude = $data[0]['lat'];
               $longitude = $data[0]['lon'];
-
+  
               return [
                   'latitude' => $latitude,
                   'longitude' => $longitude,
@@ -592,7 +793,6 @@ class AkademikController extends Controller
   
       return null;
     }
-  
   
 }
 

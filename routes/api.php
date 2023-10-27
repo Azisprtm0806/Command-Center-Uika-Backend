@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v1'], function(){
     Route::prefix('/cc')->group(function (){
+        Route::get('/latlong-desa', [\App\Http\Controllers\Api\AkademikController::class, 'latlongDesa']);
+        Route::get('/latlong-asal-sekolah', [\App\Http\Controllers\Api\AkademikController::class, 'latlongAsalSekolah']);
+
         Route::prefix('/mhs')->group(function (){
             Route::get('/total-mhs-daftar', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsDaftar']);
             Route::get('/total-mhs-diterima', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsDiterima']);

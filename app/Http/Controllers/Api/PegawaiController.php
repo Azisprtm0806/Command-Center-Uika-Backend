@@ -66,7 +66,6 @@ class PegawaiController extends Controller
     }
   }
 
-
   public function jafungDosen(){
     try {
       $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.status_pegawai', 'simpeg_pegawai.nama', 'simpeg_pegawai.status_kerja', 'simpeg_pegawai.status_sipil', 'simpeg_pegawai.jabatan_fungsional')
