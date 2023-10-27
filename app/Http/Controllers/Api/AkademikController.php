@@ -275,7 +275,7 @@ class AkademikController extends Controller
       }
     }
 
-    public function petaSebaranNewMhs(){
+    public function dataNewMhs(){
       try {
         $data = DB::table('pmb_registration as a')
           ->select('a.*', 'e.name as prodi', 'd.name', 'c.address', 'd.latitude', 'd.longitude')
@@ -296,7 +296,7 @@ class AkademikController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-    public function petaSebaranOldMhs(){
+    public function dataOldMhs(){
       try {
         $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
           ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
@@ -312,10 +312,54 @@ class AkademikController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+    
+    public function dataAsalSekolahNewMhs(){
+      try {     
+        $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
+        ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+        ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+        ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+        ->where('pmb_registration.academic_year', '2023/2024')
+        ->where('pmb_registration.semester', 'GASAL')
+        ->get();
+
+          return Datatables::of($data)->addIndexColumn()->make(true);
+
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
+    public function dataAsalSekolahOldMhs(){
+      try {
+          $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
+          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+          ->where('pmb_registration.academic_year', '2023/2024')
+          ->where('pmb_registration.semester', 'GASAL')
+          ->get();
+
+
+          return Datatables::of($data)->addIndexColumn()->make(true);
+
+      } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
 
     public function petaSebaranDesaMhs(Request $request) {
       $key = $request->key;
       $tahunAkademik = $request->tahun_akademik;
+
+      if(empty($key) || $key == null){
+        return response()->json(['message' => 'key param required.']);
+      }
+      if(empty($tahunAkademik) || $tahunAkademik == null){
+        return response()->json(['message' => 'tahun_akademik param required.']);
+      }
+
+      
       try {
         if($key == 'new'){
           $data = DB::table('pmb_registration as a')
@@ -338,6 +382,7 @@ class AkademikController extends Controller
                     $item->latitude = $geocodedData['latitude'];
                     $item->longitude = $geocodedData['longitude'];
                 }
+
             }
           }
   
@@ -371,6 +416,76 @@ class AkademikController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
+    public function petaSebaranAsalSekolah(Request $request){
+      $key = $request->key;
+      $tahunAkademik = $request->tahun_akademik;
+      $semester = strtoupper($request->semester);
+
+      if(empty($key) || $key == null){
+        return response()->json(['message' => 'key param required.']);
+      }
+      if(empty($tahunAkademik) || $tahunAkademik == null){
+        return response()->json(['message' => 'tahun_akademik param required.']);
+      }
+      if(empty($semester) || $semester == null){
+        return response()->json(['message' => 'semester param required.']);
+      }
+
+      try {
+        if($key == 'new'){
+          $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
+          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+          ->where('pmb_registration.academic_year', $tahunAkademik)
+          ->where('pmb_registration.semester', $semester)
+          ->get();
+
+          foreach ($data as $item) {
+            if (empty($item->latitude) || empty($item->longitude)) {
+                $geocodedData = $this->geocodeAddress($item->address_sekolah);
+
+                if ($geocodedData) {
+                    $item->latitude = $geocodedData['latitude'];
+                    $item->longitude = $geocodedData['longitude'];
+                }
+
+            }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+        } else if($key == 'old') {
+          $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
+          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
+          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
+          ->where('pmb_registration.academic_year', $tahunAkademik)
+          ->where('pmb_registration.semester', $semester)
+          ->get();
+
+          foreach ($data as $item) {
+            if (empty($item->latitude) || empty($item->longitude)) {
+                $geocodedData = $this->geocodeAddress($item->address_sekolah);
+
+                if ($geocodedData) {
+                    $item->latitude = $geocodedData['latitude'];
+                    $item->longitude = $geocodedData['longitude'];
+                }
+            }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+
+        } else {
+          return response()->json(['message' => 'value key param not allowed. must be [new, old]' ]);
+        }
+
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
     
     private function geocodeAddress($address) {
       $encodedAddress = urlencode($address);
