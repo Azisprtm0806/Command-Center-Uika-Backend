@@ -241,43 +241,49 @@ class ChartController extends Controller
               ->select('pmb_provinsi.name AS provinsi', \DB::raw('SUM(CASE WHEN c.student_code <> "" THEN 1 ELSE 0 END) AS total'))
               ->get();
 
-            $dataPeminatProvinsi = PmbProvinsi::select('name as provinsi')
-              ->selectRaw('COUNT(pmb_registration.registration_no) as total')
-              ->join('pmb_candidate', 'pmb_provinsi.id', '=', 'pmb_candidate.prov_code')
-              ->join('pmb_registration', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
-              ->join('pmb_registration_payment', 'pmb_registration.registration_no', '=', 'pmb_registration_payment.registration_no')
-              ->whereIn('pmb_registration_payment.fee_item', ['1000', '1001', '1002', '1003'])
-              ->where('pmb_registration.academic_year', '2023/2024')
-              ->where('pmb_registration.semester', 'GASAL')
-              ->groupBy('pmb_provinsi.name')
-              ->orderBy('pmb_provinsi.name', 'ASC')
-              ->get();
+            $dataPeminatProvinsi = Pmb_Provinsi::select('pmb_provinsi.name as provinsi')
+            ->selectRaw('COUNT(pmb_registration.registration_no) as total')
+            ->join('pmb_candidate', 'pmb_provinsi.id', '=', 'pmb_candidate.prov_code')
+            ->join('pmb_registration', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
+            ->join('pmb_registration_payment', 'pmb_registration.registration_no', '=', 'pmb_registration_payment.registration_no')
+            ->whereIn('pmb_registration_payment.fee_item', ['1000', '1001', '1002', '1003'])
+            ->where('pmb_registration.academic_year', '2023/2024')
+            ->where('pmb_registration.semester', 'GASAL')
+            ->groupBy('pmb_provinsi.name')
+            ->orderBy('pmb_provinsi.name', 'ASC')
+            ->get();
             
             $totalDaftarMhs = [];
             $totalDiterimaMhs = [];
             $totalPeminatMhs = [];
             $labels = [];
 
-            foreach ($dataPerProvinsiDaftar as $item) {
-              $provinsi = $item['provinsi'];
-              $total = $item['total'];
+            $provinsiListDaftar = [];
+            $provinsiListDiterima = [];
+            $provinsiListPeminat = [];
 
-              $labels[] = $provinsi;
-              $totalDaftarMhs[] = $total;
+            foreach ($dataPerProvinsiDaftar as $item) {
+                $provinsiListDaftar[$item['provinsi']] = $item['total'];
             }
 
             foreach ($dataPerProvinsiDiterima as $item) {
-              $provinsi = $item['provinsi'];
-              $total = $item['total'];
-
-              $totalDiterimaMhs[] = $total;
+                $provinsiListDiterima[$item['provinsi']] = $item['total'];
             }
+
             foreach ($dataPeminatProvinsi as $item) {
-              $provinsi = $item['provinsi'];
-              $total = $item['total'];
-
-              $totalPeminatMhs[] = $total;
+                $provinsiListPeminat[$item['provinsi']] = $item['total'];
             }
+
+            $combinedProvinces = array_merge($provinsiListDaftar, $provinsiListDiterima, $provinsiListPeminat);
+
+            $labels = array_keys($combinedProvinces);
+
+            foreach ($labels as $provinsi) {
+                $totalDaftarMhs[] = $provinsiListDaftar[$provinsi] ?? 0;
+                $totalDiterimaMhs[] = $provinsiListDiterima[$provinsi] ?? 0;
+                $totalPeminatMhs[] = $provinsiListPeminat[$provinsi] ?? 0;
+            }
+            
 
             $totalDiterimaMhs = array_map('intval', $totalDiterimaMhs);
             $totalPeminatMhs = array_map('intval', $totalPeminatMhs);
