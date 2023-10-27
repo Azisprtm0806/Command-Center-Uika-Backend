@@ -12,6 +12,7 @@ use Yajra\Datatables\Datatables;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class AkademikController extends Controller
 {
@@ -288,6 +289,7 @@ class AkademikController extends Controller
           ->where('a.semester', 'GASAL')
           ->get();
 
+
           return Datatables::of($data)->addIndexColumn()->make(true);
 
       } catch (\Exception $e) {
@@ -310,4 +312,89 @@ class AkademikController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
+    public function petaSebaranDesaMhs(Request $request) {
+      $key = $request->key;
+      $tahunAkademik = $request->tahun_akademik;
+      try {
+        if($key == 'new'){
+          $data = DB::table('pmb_registration as a')
+          ->select('a.*', 'e.name as prodi', 'd.name', 'c.address', 'd.latitude', 'd.longitude')
+          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+          ->join('pmb_desa as d', 'd.id', '=', 'c.desa_code')
+          ->join('siak_department as e', 'e.code', '=', 'a.department_code')
+          ->where('b.paid', 'Y')
+          ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+          ->where('a.academic_year', $tahunAkademik)
+          ->where('a.semester', 'GASAL')
+          ->take(10)
+          ->get();
+
+          foreach ($data as $item) {
+            if (empty($item->latitude) || empty($item->longitude)) {
+                $geocodedData = $this->geocodeAddress($item->name);
+
+                if ($geocodedData) {
+                    $item->latitude = $geocodedData['latitude'];
+                    $item->longitude = $geocodedData['longitude'];
+                }
+            }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+        } else if($key == 'old') {
+          $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
+            ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
+            ->join('pmb_registration', 'pmb_registration.registration_no', '=', 'pmb_candidate.registration_no')
+            ->join('pmb_desa', 'pmb_desa.id', '=', 'pmb_candidate.desa_code')
+            ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+            ->where('pmb_registration.registration_no', '!=', $tahunAkademik)
+            ->take(10)
+            ->get();
+          foreach ($data as $item) {
+            if (empty($item->latitude) || empty($item->longitude)) {
+                $geocodedData = $this->geocodeAddress($item->desa);
+
+                if ($geocodedData) {
+                    $item->latitude = $geocodedData['latitude'];
+                    $item->longitude = $geocodedData['longitude'];
+                }
+            }
+          }
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+
+        } else {
+          return response()->json(['message' => 'value key param not allowed. must be [new, old]' ]);
+        }
+
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+    
+    private function geocodeAddress($address) {
+      $encodedAddress = urlencode($address);
+  
+      $response = Http::get("https://nominatim.openstreetmap.org/search?format=json&q={$encodedAddress}&format=json&addressdetails=1&limit=1");
+  
+      if ($response->successful()) {
+          $data = $response->json();
+          if (count($data) > 0) {
+              $latitude = $data[0]['lat'];
+              $longitude = $data[0]['lon'];
+
+              return [
+                  'latitude' => $latitude,
+                  'longitude' => $longitude,
+              ];
+          }
+      }
+  
+      return null;
+    }
+  
+  
 }
+
