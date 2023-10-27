@@ -7,10 +7,14 @@ use Illuminate\Support\Facades\Route;
 Route::group(['prefix' => 'v1'], function(){
     Route::prefix('/cc')->group(function (){
         Route::prefix('/mhs')->group(function (){
-            Route::get('/mhs-daftar', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDaftar']);
-            Route::get('/mhs-diterima', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDiterima']);
+            Route::get('/total-mhs-daftar', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsDaftar']);
+            Route::get('/total-mhs-diterima', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsDiterima']);
+            Route::get('/total-mhs-peminat', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsPeminat']);
+            Route::get('/mhs-daftar-detail', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDaftarDetail']);
+            Route::get('/mhs-peminat-detail', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPeminatDetail']);
             Route::get('/rata-ipk-prodi', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerProdi']);
             Route::get('/rata-ipk-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerFakultas']);
+            Route::get('/lama-lulusan', [\App\Http\Controllers\Api\AkademikController::class, 'lamaLulusan']);
             Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPerProvinsi']);
             Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'mhsdDiterimaProvinsiFakultas']);
             Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\AkademikController::class, 'mhsAktifNonFrs']);
@@ -56,6 +60,8 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/beasiswa-chart', [\App\Http\Controllers\Api\ChartController::class, 'beasiswaChart']);
             Route::get('/mhs-spp-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsSppChart']);
             Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk']);
+            Route::get('/lama-lulusan-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartLamaLulusan']);
+            Route::get('/jafung-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafung']);
         });
     });
 });

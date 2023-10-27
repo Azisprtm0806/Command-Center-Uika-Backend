@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Http;
 
 class AkademikController extends Controller
 {
-    public function mhsDaftar(Request $request){
+    public function totalMhsDaftar(Request $request){
         $tahunAkademik = $request->tahun_akademik;
         $semester = strtoupper($request->semester);
 
@@ -42,7 +42,7 @@ class AkademikController extends Controller
         }
     }
 
-    public function mhsDiterima(Request $request){
+    public function totalMhsDiterima(Request $request){
       $tahunAkademik = $request->tahun_akademik;
       $semester = strtoupper($request->semester);
 
@@ -70,6 +70,71 @@ class AkademikController extends Controller
       }
     }
 
+    public function totalMhsPeminat(Request $request){
+      try {
+        $data = DB::table('pmb_registration as a')
+          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+          ->join('siak_department as d', 'd.code', '=', 'a.department_code')
+          ->join('siak_faculty as e', 'e.code', '=', 'd.faculty_code')
+          ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+          ->where('a.academic_year', '2023/2024')
+          ->where('a.semester', 'GASAL')
+          ->groupBy('e.name', 'd.name') 
+          ->select('e.name as fakultas', 'd.name as prodi', DB::raw('COUNT(a.registration_no) as total'))
+          ->orderBy('e.code')
+          ->orderBy('d.npm_code', 'ASC')
+          ->get();
+        
+          return Datatables::of($data)->addIndexColumn()->make(true);
+      }catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+
+    public function mhsDaftarDetail(Request $request){
+        try {
+            $data = DB::select("
+            SELECT d.code, MAX(a.registration_no) AS registration_no, MAX(a.candidate_name) AS candidate_name, MAX(a.candidate_phone) AS candidate_phone, MAX(c.sex) AS sex, MAX(c.email) AS email, MAX(c.national_id_number) AS national_id_number, MAX(c.birthplace) AS birthplace, MAX(c.birthdate) AS birthdate, MAX(c.marital_status) AS marital_status, MAX(e.name) AS fakultas, MAX(d.name) AS prodi
+            FROM pmb_registration a
+            INNER JOIN pmb_registration_payment b ON b.registration_no = a.registration_no
+            INNER JOIN pmb_candidate c ON c.registration_no = a.registration_no
+            INNER JOIN siak_department d ON d.code = a.department_code
+            INNER JOIN siak_faculty e ON e.code = d.faculty_code
+            WHERE b.paid='Y' AND b.fee_item IN ('1000', '1001', '1002', '1003')
+            AND a.academic_year='2023/2024' AND a.semester='GASAL'
+            GROUP BY d.code
+            ORDER BY e.code, d.npm_code ASC
+            
+            ");
+    
+            return Datatables::of($data)->addIndexColumn()->make(true);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+  
+    public function mhsPeminatDetail(Request $request){
+      try {
+          $data = DB::select("
+              SELECT e.name AS fakultas, d.name AS prodi, COUNT(a.registration_no) AS total
+              FROM pmb_registration a
+              INNER JOIN pmb_registration_payment b ON b.registration_no=a.registration_no
+              INNER JOIN pmb_candidate c ON c.registration_no=a.registration_no
+              INNER JOIN siak_department d ON d.code=a.department_code
+              INNER JOIN siak_faculty e ON e.code=d.faculty_code
+              WHERE b.fee_item IN ('1000','1001','1002','1003')
+              AND a.academic_year='2023/2024' AND a.semester='GASAL'
+              GROUP BY e.name, d.name  -- Tambahkan kolom ini ke dalam GROUP BY
+              ORDER BY e.code, d.npm_code ASC
+          ");
+  
+          return Datatables::of($data)->addIndexColumn()->make(true);
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+    }
+  
     public function ipkPerProdi(Request $request){
       try {
           $data = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', \DB::raw('SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total'))
@@ -108,6 +173,26 @@ class AkademikController extends Controller
       }catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
       }
+    }
+
+    public function lamaLulusan(Request $request){
+        try {
+            $data = DB::select("
+                SELECT a.code, MAX(a.name) as name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, a.registered_date, a.graduated_date, SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) AS lama_lulus, IF(SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
+                FROM siak_student a
+                INNER JOIN siak_department b ON b.code = a.department_code
+                INNER JOIN siak_fee_payment c ON c.student_code = a.code
+                WHERE SUBSTRING(a.code, 1, 2) IN ('19', '20', '21', '22')
+                AND a.status = 'GRADUATED'
+                AND c.academic_year = '2023/2024'
+                AND c.semester = 'GASAL'
+                GROUP BY a.code, a.sex, b.name, a.ipk, a.thesis_title, a.registered_date, a.graduated_date
+            ");
+    
+            return Datatables::of($data)->addIndexColumn()->make(true);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function mhsPerProvinsi(){
@@ -296,6 +381,7 @@ class AkademikController extends Controller
         return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+    
     public function dataOldMhs(){
       try {
         $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
@@ -485,7 +571,6 @@ class AkademikController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-
     
     private function geocodeAddress($address) {
       $encodedAddress = urlencode($address);

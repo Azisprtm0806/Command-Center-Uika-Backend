@@ -64,6 +64,20 @@ class ChartController extends Controller
             ->select('e.name AS fakultas', 'd.name AS prodi', \DB::raw('COUNT(pmb_registration.registration_no) AS total'))
             ->get();
 
+            $dataPeminat = DB::table('pmb_registration as a')
+            ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+            ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+            ->join('siak_department as d', 'd.code', '=', 'a.department_code')
+            ->join('siak_faculty as e', 'e.code', '=', 'd.faculty_code')
+            ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+            ->where('a.academic_year', $tahunAkademik)
+            ->where('a.semester', $semester)
+            ->groupBy('e.name', 'd.name') 
+            ->select('e.name as fakultas', 'd.name as prodi', DB::raw('COUNT(a.registration_no) as total'))
+            ->orderBy('e.code')
+            ->orderBy('d.npm_code', 'ASC')
+            ->get();
+
           if($key == 'fakultas' && !empty($tahunAkademik) && !empty($semester)){
             $totalsDaftar = [];
             foreach ($dataDaftar as $item) {
@@ -88,9 +102,22 @@ class ChartController extends Controller
                   $totalsTerima[$fakultas] += $total;
               }
             }
+
+            $totalsPeminat = [];
+            foreach ($dataPeminat as $item) {
+              $fakultas = $item->fakultas;
+              $total = $item->total;
+  
+              if (!isset($totalsPeminat[$fakultas])) {
+                  $totalsPeminat[$fakultas] = $total;
+              } else {
+                  $totalsPeminat[$fakultas] += $total;
+              }
+            }
   
             $TotalDaftar = array_values($totalsDaftar);
             $TotalTerima = array_values($totalsTerima);
+            $TotalPeminat = array_values($totalsPeminat);
             $totalsFakultas = array_keys($totalsDaftar);
   
             $finalResponse = [
@@ -105,10 +132,15 @@ class ChartController extends Controller
                       'type' => 'column',
                       'data' => $TotalTerima
                     ],
+                    [
+                      'name' => 'Mahasiswa Peminat',
+                      'type' => 'column',
+                      'data' => $TotalPeminat
+                    ]
                   ],
               'label' => $totalsFakultas
             ];
-  
+
             return new ApiResource(true, 'Chart Mahasiswa Per Faultas', $finalResponse);
           } else if($key == 'prodi' && !empty($tahunAkademik) && !empty($semester)){
             $dataTerimaProdi = Pmb_Registration::join('pmb_registration_payment AS b', 'b.registration_no', '=', 'pmb_registration.registration_no')
@@ -149,6 +181,20 @@ class ChartController extends Controller
                 $totalsMahasiswaDiterima[] = $total;
             }
 
+            $totalsPeminat = [];
+            foreach ($dataPeminat as $item) {
+              $prodi = $item->prodi;
+              $total = $item->total;
+  
+              if (!isset($totalsPeminat[$prodi])) {
+                  $totalsPeminat[$prodi] = $total;
+              } else {
+                  $totalsPeminat[$prodi] += $total;
+              }
+            }
+
+            $TotalPeminat = array_values($totalsPeminat);
+
             $finalResponse = [
                 'series' => [
                     [
@@ -160,6 +206,11 @@ class ChartController extends Controller
                         'name' => 'Mahasiswa Diterima',
                         'type' => 'column',
                         'data' => $totalsMahasiswaDiterima,
+                    ],
+                    [
+                        'name' => 'Mahasiswa Peminat',
+                        'type' => 'column',
+                        'data' => $TotalPeminat,
                     ],
                 ],
                 'label' => $labels
@@ -723,14 +774,22 @@ class ChartController extends Controller
       }
     }
 
-    public function chartIpk(){
+    public function chartIpk(Request $request){
+      $tahunAkademik = $request->tahun_akademik;
+      $semester = strtoupper($request->semester);
+      $angkatan = $request->angkatan;
+
+      $angkatanArray = explode('/', $angkatan);
+
+      $angkatanString = "('" . implode("','", $angkatanArray) . "')";
+
         try {
             $data = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', \DB::raw('SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total'))
                 ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
                 ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
-                ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN ('19','20','21','22')")
-                ->where('siak_student_academic_snapshot.academic_year', '2022/2023')
-                ->where('siak_student_academic_snapshot.semester', 'GENAP')
+                ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN $angkatanString")
+                ->where('siak_student_academic_snapshot.academic_year', $tahunAkademik)
+                ->where('siak_student_academic_snapshot.semester', $semester)
                 ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
                 ->orderBy('siak_department.code')
                 ->orderBy('siak_student_academic_snapshot.academic_year', 'asc')
@@ -753,10 +812,171 @@ class ChartController extends Controller
                 'label' => $prodiLabels,
             ];
     
-            return new ApiResource(true, 'Chart Mhs SPP', $finalResponse);
+            return new ApiResource(true, 'Chart IPK', $finalResponse);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function chartLamaLulusan(Request $request){
+      $tahunAkademik = $request->tahun_akademik;
+      $semester = $request->semester;
+      $angkatan = $request->angkatan;
+      
+      $angkatan = $request->angkatan;
+
+      $angkatanArray = explode('/', $angkatan);
+
+      $angkatanString = "('" . implode("','", $angkatanArray) . "')";
+
+        try {
+          $data = DB::select("
+          SELECT a.code, MAX(a.name) as name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, a.registered_date, a.graduated_date, SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) AS lama_lulus, IF(SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
+          FROM siak_student a
+          INNER JOIN siak_department b ON b.code = a.department_code
+          INNER JOIN siak_fee_payment c ON c.student_code = a.code
+          WHERE SUBSTRING(a.code, 1, 2) IN $angkatanString
+          AND a.status = 'GRADUATED'
+          AND c.academic_year = ?
+          AND c.semester = ?
+          GROUP BY a.code, a.sex, b.name, a.ipk, a.thesis_title, a.registered_date, a.graduated_date
+      ", [$tahunAkademik, $semester]);
+    
+            $prodiData = [];
+    
+            foreach ($data as $item) {
+                $prodi = $item->prodi;
+                $keterangan = $item->keterangan;
+                $lamaLulus = floatval($item->lama_lulus);
+    
+                if (!isset($prodiData[$prodi])) {
+                    $prodiData[$prodi] = [
+                        'Lulus Tepat Waktu' => 0,
+                        'Lulus Tidak Tepat Waktu' => 0,
+                        'Total Lama Lulus' => 0,
+                        'Total Lulusan' => 0,
+                    ];
+                }
+    
+                $prodiData[$prodi][$keterangan]++;
+                $prodiData[$prodi]['Total Lama Lulus'] += $lamaLulus;
+                $prodiData[$prodi]['Total Lulusan']++;
+            }
+    
+            $chartData = [
+                'series' => [
+                    [
+                        'name' => 'Lulus Tidak Tepat Waktu',
+                        'type' => 'column',
+                        'data' => [],
+                    ],
+                    [
+                        'name' => 'Lulus Tepat Waktu',
+                        'type' => 'column',
+                        'data' => [],
+                    ],
+                    [
+                        'name' => 'Rata-rata Lama Lulus',
+                        'type' => 'column',
+                        'data' => [],
+                    ],
+                ],
+                'label' => [],
+            ];
+    
+            foreach ($prodiData as $prodi => $values) {
+                $chartData['label'][] = $prodi;
+                $chartData['series'][0]['data'][] = $values['Lulus Tidak Tepat Waktu'];
+                $chartData['series'][1]['data'][] = $values['Lulus Tepat Waktu'];
+                $chartData['series'][2]['data'][] = round($values['Total Lama Lulus'] / $values['Total Lulusan'], 2);
+            }
+    
+            return response()->json($chartData);
+        } catch (\Throwable $th) {
+            return response()->json(['error' => $th->getMessage()], 500);
+        }
+    }
+
+    public function chartJafung(Request $request){
+      $key = $request->key;
+      $status_kerja = strtoupper($request->status_kerja);
+
+
+      if(empty($key) || $key == null){
+        return response()->json(['message' => 'key param required.']);
+      }
+      if(empty($status_kerja) || $status_kerja == null){
+        return response()->json(['message' => 'status_kerja param required.']);
+      }
+
+      try {
+          $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.status_pegawai', 'simpeg_pegawai.nama', 'simpeg_pegawai.status_kerja', 'simpeg_pegawai.status_sipil', 'simpeg_pegawai.jabatan_fungsional')
+              ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+              ->where('adm_lookup.lookup_name', 'DIVISION')
+              ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+              ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+              ->where('simpeg_pegawai.status_kerja', $status_kerja)
+              ->get();
+
+          if($key == 'lookupvalue'){
+            $lookupValues = $data->pluck('lookup_value')->unique()->values()->toArray();
+            foreach ($lookupValues as $lookup) {
+              $totalDataLookupValue[] = $data->where('lookup_value', $lookup)->count();
+            }
+            $finalResponse = [
+              'series' => [
+                  [
+                      'name' => 'Total Data lookup_value',
+                      'type' => 'column',
+                      'data' => $totalDataLookupValue,
+                  ],
+                 
+              ],
+              'label' => $lookupValues,
+            ];
+  
+            return new ApiResource(true, 'Chart lookup Value', $finalResponse);
+
+          } else if($key == 'jabatan'){
+            $jabatanFungsional = $data->pluck('jabatan_fungsional')->unique()->values()->toArray();
+          
+            $jabatanFungsional = array_map(function ($item) {
+              return empty($item) ? '-' : $item;
+            }, $jabatanFungsional);
+    
+            $totalDataLookupValue = [];
+            $totalDataJafung = [];
+  
+          
+  
+            foreach ($jabatanFungsional as $jafung) {
+              if ($jafung === '-') {
+                  $totalDataJafung[] = $data->filter(function ($item) use ($jafung) {
+                      return empty($item['jabatan_fungsional']);
+                  })->count();
+              } else {
+                  $totalDataJafung[] = $data->where('jabatan_fungsional', $jafung)->count();
+              }
+            }
+  
+            $finalResponse = [
+                'series' => [
+                    [
+                        'name' => 'Total Data jabatan fungsional',
+                        'type' => 'column',
+                        'data' => $totalDataJafung,
+                    ],
+                ],
+                'label jafung' => $jabatanFungsional,
+            ];
+    
+            return new ApiResource(true, 'Chart Jafung', $finalResponse);
+          } else {
+            return response()->json(['message' => 'value key param not allowed. must be [lookupvalue, jabatan]' ]);
+          }
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
     }
 }
 
