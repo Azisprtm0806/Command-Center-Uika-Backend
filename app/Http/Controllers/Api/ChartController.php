@@ -1007,6 +1007,43 @@ class ChartController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
+    public function chartJafungProdi(Request $request){
+      $prodi = $request->prodi;
+      try {
+          $data = Simpeg_Pegawai::select('jabatan_fungsional', DB::raw('COUNT(nip) AS jumlah'))
+              ->where('klasi_pegawai', 'PENDIDIK (DOSEN)')
+              ->where('status_kerja', 'AKTIF')
+              ->where('division', $prodi)
+              ->groupBy('jabatan_fungsional')
+              ->orderBy('jabatan_fungsional')
+              ->get();
+  
+          $dataPoints = [];
+          $labels = [];
+  
+          foreach ($data as $item) {
+              $labels[] = $item->jabatan_fungsional;
+              $dataPoints[] = $item->jumlah;
+          }
+  
+          $finalResponse = [
+              'series' => [
+                  [
+                      'name' => 'Total Data Jafung',
+                      'type' => 'column',
+                      'data' => $dataPoints,
+                  ],
+              ],
+              'label' => $labels,
+          ];
+  
+          return new ApiResource(true, 'Chart Struktural', $finalResponse);
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
+  }
+  
 }
 
 

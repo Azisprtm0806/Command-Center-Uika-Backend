@@ -7,7 +7,7 @@ use App\Http\Resources\ApiResource;
 use App\Models\Simpeg_Pegawai;
 use Yajra\Datatables\Datatables;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 
 class PegawaiController extends Controller
 {
@@ -111,6 +111,23 @@ class PegawaiController extends Controller
         ->get();
 
 
+
+      return Datatables::of($data)->addIndexColumn()->make(true);
+
+    } catch (\Exception $e) {
+      return response()->json(['error' => $e->getMessage()], 500);
+    }
+  }
+
+  public function dosenJafungProdi(Request $request){
+    $prodi = $request->prodi;
+    try {
+      $data = Simpeg_Pegawai::select('nip', DB::raw("CONCAT(IF(gelar_depan<>'', CONCAT(gelar_depan, ' '), ''), nama, ' ', gelar_belakang) AS nama_dosen"), 'jabatan_fungsional')
+        ->where('klasi_pegawai', 'PENDIDIK (DOSEN)')
+        ->where('status_kerja', 'AKTIF')
+        ->where('division', $prodi)
+        ->orderBy('jabatan_fungsional')
+        ->get();
 
       return Datatables::of($data)->addIndexColumn()->make(true);
 

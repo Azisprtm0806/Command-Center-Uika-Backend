@@ -47,6 +47,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/total-tendik', [\App\Http\Controllers\Api\PegawaiController::class, 'totalTendik']);
             Route::get('/jmlh-pengajar-dosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTenagaPengajarDosen']);
             Route::get('/jafungDosen', [\App\Http\Controllers\Api\PegawaiController::class, 'jafungDosen']);
+            Route::get('/jafungDosenProdi', [\App\Http\Controllers\Api\PegawaiController::class, 'dosenJafungProdi']);
             Route::get('/struktural', [\App\Http\Controllers\Api\PegawaiController::class, 'struktural']);
             Route::get('/jml-tendik', [\App\Http\Controllers\Api\PegawaiController::class, 'jmlTendik']);
         });
@@ -73,6 +74,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk']);
             Route::get('/lama-lulusan-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartLamaLulusan']);
             Route::get('/jafung-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafung']);
+            Route::get('/jafung-prodi-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungProdi']);
         });
     });
 });
