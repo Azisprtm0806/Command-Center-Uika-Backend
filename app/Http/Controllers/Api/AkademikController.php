@@ -178,19 +178,24 @@ class AkademikController extends Controller
 
     public function lamaLulusan(Request $request){
         try {
-            $data = DB::select("
-                SELECT a.code, MAX(a.name) as name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, a.registered_date, a.graduated_date, SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) AS lama_lulus, IF(SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
-                FROM siak_student a
-                INNER JOIN siak_department b ON b.code = a.department_code
-                INNER JOIN siak_fee_payment c ON c.student_code = a.code
-                WHERE SUBSTRING(a.code, 1, 2) IN ('19', '20', '21', '22')
+          $students = DB::select("
+            SELECT a.code, a.name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, 
+                   CONCAT(YEAR(a.registered_date), '-09-01') AS tahun_daftar, a.graduated_date, 
+                   YEAR(a.graduated_date) AS tahun, 
+                   SUBSTRING(DATEDIFF(a.graduated_date, CONCAT(YEAR(a.registered_date), '-09-01'))/365, 1, 3) AS lama_lulus, 
+                   IF(SUBSTRING(DATEDIFF(a.graduated_date, CONCAT(YEAR(a.registered_date), '-09-01'))/365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
+            FROM siak_student a
+            INNER JOIN siak_department b ON b.code = a.department_code
+            WHERE SUBSTRING(a.code, 1, 2) IN ('19', '20', '21', '22')
                 AND a.status = 'GRADUATED'
-                AND c.academic_year = '2023/2024'
-                AND c.semester = 'GASAL'
-                GROUP BY a.code, a.sex, b.name, a.ipk, a.thesis_title, a.registered_date, a.graduated_date
-            ");
-    
-            return Datatables::of($data)->addIndexColumn()->make(true);
+                AND YEAR(a.graduated_date) = '2023'
+                AND b.code = 'FT_TI'
+            GROUP BY a.code, a.name, a.sex, b.name, a.ipk, a.thesis_title, 
+                     a.graduated_date, tahun_daftar, tahun, lama_lulus, keterangan
+        ");
+      
+           return Datatables::of($students)->addIndexColumn()->make(true);
+      
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -361,19 +366,32 @@ class AkademikController extends Controller
       }
     }
 
-    public function dataNewMhs(){
+    public function dataMhs(){
       try {
         $data = DB::table('pmb_registration as a')
-          ->select('a.*', 'e.name as prodi', 'd.name', 'c.address', 'd.latitude', 'd.longitude')
-          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
-          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
-          ->join('pmb_desa as d', 'd.id', '=', 'c.desa_code')
-          ->join('siak_department as e', 'e.code', '=', 'a.department_code')
-          ->where('b.paid', 'Y')
-          ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
-          ->where('a.academic_year', '2023/2024')
-          ->where('a.semester', 'GASAL')
-          ->get();
+        ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+        ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+        ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+        ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+        ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+        ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+        ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+        ->select(
+            'c.registration_no',
+            'c.name as nama_mahasiswa',
+            'c.student_code as npm',
+            'c.sex',
+            'g.name as prodi',
+            'd.name as provinsi',
+            'f.name as city',
+            'h.name as kecamatan',
+            'e.name as desa',
+            'c.address'
+        )
+        ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
+        ->where('a.academic_year', '2022/2023')
+        ->where('c.student_code', '!=', '')
+        ->get();
 
 
           return Datatables::of($data)->addIndexColumn()->make(true);
@@ -383,17 +401,37 @@ class AkademikController extends Controller
       }
     }
 
-    public function dataOldMhs(){
+    public function dataMhsPeminat(){
       try {
-        $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
-          ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
-          ->join('pmb_registration', 'pmb_registration.registration_no', '=', 'pmb_candidate.registration_no')
-          ->join('pmb_desa', 'pmb_desa.id', '=', 'pmb_candidate.desa_code')
-          ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
-          ->where('pmb_registration.registration_no', '!=', '2023/2024')
+        $students = DB::table('pmb_registration as a')
+          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+          ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+          ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+          ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+          ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+          ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+          ->select(
+              'c.registration_no',
+              'c.name as nama_mahasiswa',
+              'c.student_code as npm',
+              'c.sex',
+              'g.name as prodi',
+              'd.name as provinsi',
+              'f.name as city',
+              'h.name as kecamatan',
+              'e.name as desa',
+              'c.address'
+          )
+          ->where(function ($query) {
+              $query->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+                  ->where('a.academic_year', '2022/2023')
+                  ->where('c.student_code', '');
+          })
           ->get();
 
-          return Datatables::of($data)->addIndexColumn()->make(true);
+
+          return Datatables::of($students)->addIndexColumn()->make(true);
 
       } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
@@ -442,32 +480,41 @@ class AkademikController extends Controller
       if(empty($key) || $key == null){
         return response()->json(['message' => 'key param required.']);
       }
-      if(empty($tahunAkademik) || $tahunAkademik == null){
-        return response()->json(['message' => 'tahun_akademik param required.']);
-      }
-
       try {
-        if($key == 'new'){
+        if($key == 'mhs'){
           $data = DB::table('pmb_registration as a')
-          ->select('a.*', 'e.name as prodi', 'd.name', 'c.address')
           ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
           ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
-          ->join('pmb_desa as d', 'd.id', '=', 'c.desa_code')
-          ->join('siak_department as e', 'e.code', '=', 'a.department_code')
-          ->where('b.paid', 'Y')
-          ->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
-          ->where('a.academic_year', $tahunAkademik)
-          ->where('a.semester', 'GASAL')
+          ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+          ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+          ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+          ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+          ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+          ->select(
+              'c.registration_no',
+              'c.name as nama_mahasiswa',
+              'c.student_code as npm',
+              'c.sex',
+              'g.name as prodi',
+              'd.name as provinsi',
+              'f.name as city',
+              'h.name as kecamatan',
+              'e.name as desa',
+              'c.address'
+          )
+          ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
+          ->where('a.academic_year', '2022/2023')
+          ->where('c.student_code', '!=', '')
           ->get();
       
-          $jsonData = json_decode(file_get_contents(storage_path('latlon/desa_latlong.json')), true);
+          $jsonData = json_decode(file_get_contents(storage_path('latlon/new_desa_latlong.json')), true);
           
           $newData = [];
           
           foreach ($data as $row) {
-              $nameToMatch = $row->name;
+              $nameToMatch = $row->npm;
               $matchingData = array_filter($jsonData, function ($item) use ($nameToMatch) {
-                  return $item['name'] === $nameToMatch;
+                  return $item['npm'] === $nameToMatch;
               });
           
               if (!empty($matchingData)) {
@@ -480,7 +527,7 @@ class AkademikController extends Controller
           }
           
           return Datatables::of($newData)->addIndexColumn()->make(true);
-        } else if($key == 'old') {
+        } else if($key == 'peminat') {
           $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
             ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
             ->join('pmb_registration', 'pmb_registration.registration_no', '=', 'pmb_candidate.registration_no')
@@ -647,83 +694,51 @@ class AkademikController extends Controller
     // FUNGSI DI BAWAH UNTUK MENDAPATKAN DATA LATLONG DESA
     public function latlongDesa(Request $request){  
       try {
-        $data = Siak_Student::select('siak_student.code', 'siak_student.name', 'pmb_candidate.sex', 'siak_student.address', 'siak_student.city', 'pmb_desa.name AS desa', 'siak_department.name AS prodi', 'siak_student.status', 'pmb_desa.latitude', 'pmb_desa.longitude')
-        ->join('pmb_candidate', 'pmb_candidate.student_code', '=', 'siak_student.code')
-        ->join('pmb_registration', 'pmb_registration.registration_no', '=', 'pmb_candidate.registration_no')
-        ->join('pmb_desa', 'pmb_desa.id', '=', 'pmb_candidate.desa_code')
-        ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
-        ->where('pmb_registration.registration_no', '!=', '2023/2024')
+        $data = DB::table('pmb_registration as a')
+        ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+        ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+        ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+        ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+        ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+        ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+        ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+        ->select(
+            'c.registration_no',
+            'c.name as nama_mahasiswa',
+            'c.student_code as npm',
+            'c.sex',
+            'g.name as prodi',
+            'd.name as provinsi',
+            'f.name as city',
+            'h.name as kecamatan',
+            'e.name as desa',
+            'c.address'
+        )
+        ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
+        ->where('a.academic_year', '2022/2023')
+        ->where('c.student_code', '!=', '')
         ->get();
   
   
           foreach ($data as $item) {
-              if (empty($item->latitude) || empty($item->longitude)) {
-                  $existingData = $this->getExistingData($item->desa);
+
+                  $village = $item->desa;
+                  $subdistrict = $item->kecamatan;
+                  $city = $item->city;
+                  $province = $item->provinsi;
+
+                  $address = "$village, $subdistrict, $city, $province";
+                  $existingData = $this->getExistingData($item->npm);
   
                   if (!$existingData) {
-                      $geocodedData = $this->geocodeAddressTest($item->desa);
+                      $geocodedData = $this->geocodeAddressTest($address);
   
                       if ($geocodedData) {
                           $item->latitude = $geocodedData['latitude'];
                           $item->longitude = $geocodedData['longitude'];
-                          $this->updateLatLongInDatabase($item->desa, $geocodedData['latitude'], $geocodedData['longitude']);
+                          $this->updateLatLongInDatabase($item->npm, $geocodedData['latitude'], $geocodedData['longitude']);
                       }
                   }
-              }
-          }
-  
-          return Datatables::of($data)->addIndexColumn()->make(true);
-      } catch (\Exception $e) {
-          return response()->json(['error' => $e->getMessage()], 500);
-      }
-    }
-  
-    private function updateLatLongInDatabase($name, $latitude, $longitude) {
-        $data = [];
-    
-        $filePath = storage_path('latlon/desa_latlong.json');
-    
-        if (file_exists($filePath)) {
-            $jsonData = file_get_contents($filePath);
-            $data = json_decode($jsonData, true);
-        }
-    
-        $data[] = [
-            'name' => $name,
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-        ];
-    
-        $jsonData = json_encode($data);
-        file_put_contents($filePath, $jsonData);
-    }
-    
-    // FUNGSI DI BAWAH UNTUK MENDAPATKAN DATA LATLONG ASAL SEKOLAH
-    public function latlongAsalSekolah(Request $request){  
-      try {
-        $data = Pmb_Registration::select('pmb_registration.registration_no', 'pmb_registration.candidate_name', 'pmb_candidate.sex', 'pmb_education_slta.nama_sekolah', 'pmb_education_slta.address_sekolah')
-          ->join('pmb_candidate', 'pmb_candidate.registration_no', '=', 'pmb_registration.registration_no')
-          ->join('pmb_education_slta', 'pmb_education_slta.registration_no', '=', 'pmb_candidate.registration_no')
-          ->join('siak_department', 'siak_department.code', '=', 'pmb_registration.department_code')
-          ->where('pmb_registration.academic_year', '2023/2024')
-          ->where('pmb_registration.semester', 'GASAL')
-          ->get();
-  
-  
-          foreach ($data as $item) {
-              if (empty($item->latitude) || empty($item->longitude)) {
-                  $existingData = $this->validateData($item->address_sekolah);
-  
-                  if (!$existingData) {
-                      $geocodedData = $this->geocodeAddressTest($item->address_sekolah);
-  
-                      if ($geocodedData) {
-                          $item->latitude = $geocodedData['latitude'];
-                          $item->longitude = $geocodedData['longitude'];
-                          $this->saveLatLongAsalSekolah($item->address_sekolah, $geocodedData['latitude'], $geocodedData['longitude']);
-                      }
-                  }
-              }
           }
   
           return Datatables::of($data)->addIndexColumn()->make(true);
@@ -732,28 +747,8 @@ class AkademikController extends Controller
       }
     }
 
-    private function saveLatLongAsalSekolah($name, $latitude, $longitude) {
-      $data = [];
-  
-      $filePath = storage_path('latlon/asal_sekolah_latlong.json');
-  
-      if (file_exists($filePath)) {
-          $jsonData = file_get_contents($filePath);
-          $data = json_decode($jsonData, true);
-      }
-  
-      $data[] = [
-          'name' => $name,
-          'latitude' => $latitude,
-          'longitude' => $longitude,
-      ];
-  
-      $jsonData = json_encode($data);
-      file_put_contents($filePath, $jsonData);
-    }
-
-    private function validateData($name) {
-      $filePath = storage_path('latlon/asal_sekolah_latlong.json');
+    private function getExistingData($npm) {
+      $filePath = storage_path('latlon/new_desa_latlong.json');
       
       if (file_exists($filePath)) {
           $jsonData = file_get_contents($filePath);
@@ -761,8 +756,8 @@ class AkademikController extends Controller
 
           if (is_array($data)) {
               foreach ($data as $item) {
-                  // Check if the 'name' matches the provided name
-                  if (isset($item['name']) && $item['name'] === $name) {
+                  // Check if the 'npm' matches the provided npm
+                  if (isset($item['npm']) && $item['npm'] === $npm) {
                       return $item;
                   }
               }
@@ -772,10 +767,9 @@ class AkademikController extends Controller
       return null;
     }
 
-  // ----------------------------------------------------------------------------
     private function geocodeAddressTest($address) {
       $encodedAddress = urlencode($address);
-  
+
       $response = Http::get("https://nominatim.openstreetmap.org/search?format=json&q={$encodedAddress}&format=json&addressdetails=1&limit=1");
   
       if ($response->successful()) {
@@ -793,6 +787,26 @@ class AkademikController extends Controller
   
       return null;
     }
+    
+    private function updateLatLongInDatabase($npm, $latitude, $longitude) {
+        $data = [];
+    
+        $filePath = storage_path('latlon/new_desa_latlong.json');
+    
+        if (file_exists($filePath)) {
+            $jsonData = file_get_contents($filePath);
+            $data = json_decode($jsonData, true);
+        }
+    
+        $data[] = [
+            'npm' => $npm,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
+    
+        $jsonData = json_encode($data);
+        file_put_contents($filePath, $jsonData);
+    }    
   
 }
 

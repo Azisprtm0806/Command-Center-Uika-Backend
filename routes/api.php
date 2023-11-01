@@ -34,8 +34,8 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/mhs-beasiswa', [\App\Http\Controllers\Api\AkademikController::class, 'MhsPenerimaBeasiswa']);
             Route::get('/mhs-lulus-beasiswa', [\App\Http\Controllers\Api\AkademikController::class, 'mhsLulusBeasiswa']);
             Route::get('/asal-mhs', [\App\Http\Controllers\Api\AkademikController::class, 'AsalMhs']);
-            Route::get('/data-newMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataNewMhs']);
-            Route::get('/data-oldMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataOldMhs']);
+            Route::get('/data-mhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataMhs']);
+            Route::get('/data-mhs-peminat', [\App\Http\Controllers\Api\AkademikController::class, 'dataMhsPeminat']);
             Route::get('/data-asal-sekolah-newMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataAsalSekolahNewMhs']);
             Route::get('/data-asal-sekolah-oldMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataAsalSekolahOldMhs']);
             Route::get('/peta-sebaran-desa', [\App\Http\Controllers\Api\AkademikController::class, 'petaSebaranDesaMhs']);

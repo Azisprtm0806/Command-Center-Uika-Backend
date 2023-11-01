@@ -848,79 +848,48 @@ class ChartController extends Controller
     }
 
     public function chartLamaLulusan(Request $request){
-      $tahunAkademik = $request->tahun_akademik;
-      $semester = $request->semester;
-      $angkatan = $request->angkatan;
-      
-      $angkatan = $request->angkatan;
-
-      $angkatanArray = explode('/', $angkatan);
-
-      $angkatanString = "('" . implode("','", $angkatanArray) . "')";
-
         try {
-          $data = DB::select("
-          SELECT a.code, MAX(a.name) as name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, a.registered_date, a.graduated_date, SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) AS lama_lulus, IF(SUBSTRING(DATEDIFF(a.graduated_date, a.registered_date) / 365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
-          FROM siak_student a
-          INNER JOIN siak_department b ON b.code = a.department_code
-          INNER JOIN siak_fee_payment c ON c.student_code = a.code
-          WHERE SUBSTRING(a.code, 1, 2) IN $angkatanString
-          AND a.status = 'GRADUATED'
-          AND c.academic_year = ?
-          AND c.semester = ?
-          GROUP BY a.code, a.sex, b.name, a.ipk, a.thesis_title, a.registered_date, a.graduated_date
-      ", [$tahunAkademik, $semester]);
-    
-            $prodiData = [];
-    
-            foreach ($data as $item) {
-                $prodi = $item->prodi;
-                $keterangan = $item->keterangan;
-                $lamaLulus = floatval($item->lama_lulus);
-    
-                if (!isset($prodiData[$prodi])) {
-                    $prodiData[$prodi] = [
-                        'Lulus Tepat Waktu' => 0,
-                        'Lulus Tidak Tepat Waktu' => 0,
-                        'Total Lama Lulus' => 0,
-                        'Total Lulusan' => 0,
-                    ];
-                }
-    
-                $prodiData[$prodi][$keterangan]++;
-                $prodiData[$prodi]['Total Lama Lulus'] += $lamaLulus;
-                $prodiData[$prodi]['Total Lulusan']++;
+          $students = DB::select("
+            SELECT a.code, a.name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, 
+                   CONCAT(YEAR(a.registered_date), '-09-01') AS tahun_daftar, a.graduated_date, 
+                   YEAR(a.graduated_date) AS tahun, 
+                   SUBSTRING(DATEDIFF(a.graduated_date, CONCAT(YEAR(a.registered_date), '-09-01'))/365, 1, 3) AS lama_lulus, 
+                   IF(SUBSTRING(DATEDIFF(a.graduated_date, CONCAT(YEAR(a.registered_date), '-09-01'))/365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
+            FROM siak_student a
+            INNER JOIN siak_department b ON b.code = a.department_code
+            WHERE SUBSTRING(a.code, 1, 2) IN ('19', '20', '21', '22')
+                AND a.status = 'GRADUATED'
+                AND YEAR(a.graduated_date) = '2023'
+            GROUP BY a.code, a.name, a.sex, b.name, a.ipk, a.thesis_title, 
+                     a.graduated_date, tahun_daftar, tahun, lama_lulus, keterangan
+        ");
+
+        $prodiCounts = [];
+        $labels = [];
+
+        foreach ($students as $student) {
+            $prodi = $student->prodi;
+
+            if (!array_key_exists($prodi, $prodiCounts)) {
+                $prodiCounts[$prodi] = 1;
+                $labels[] = $prodi;
+            } else {
+                $prodiCounts[$prodi]++;
             }
-    
-            $chartData = [
-                'series' => [
-                    [
-                        'name' => 'Lulus Tidak Tepat Waktu',
-                        'type' => 'column',
-                        'data' => [],
-                    ],
-                    [
-                        'name' => 'Lulus Tepat Waktu',
-                        'type' => 'column',
-                        'data' => [],
-                    ],
-                    [
-                        'name' => 'Rata-rata Lama Lulus',
-                        'type' => 'column',
-                        'data' => [],
-                    ],
-                ],
-                'label' => [],
-            ];
-    
-            foreach ($prodiData as $prodi => $values) {
-                $chartData['label'][] = $prodi;
-                $chartData['series'][0]['data'][] = $values['Lulus Tidak Tepat Waktu'];
-                $chartData['series'][1]['data'][] = $values['Lulus Tepat Waktu'];
-                $chartData['series'][2]['data'][] = round($values['Total Lama Lulus'] / $values['Total Lulusan'], 2);
-            }
-    
-            return response()->json($chartData);
+        }
+
+        $data = [
+          'series' => [
+              [
+                  'name' => 'Total Data Mhs Per Pdi',
+                  'type' => 'column',
+                  'data' => array_values($prodiCounts),
+              ],
+          ],
+          'labels' => $labels,
+      ];
+
+      return new ApiResource(true, 'Chart lookup Value', $data);
         } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()], 500);
         }
@@ -1042,8 +1011,6 @@ class ChartController extends Controller
       } catch (\Exception $e) {
           return response()->json(['error' => $e->getMessage()], 500);
       }
-  }
+    }
   
 }
-
-
