@@ -878,23 +878,22 @@ class ChartController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-  
-  
-  
-
-
-    public function testMinMax(Request $request) {
-      try {
-  
-
-  
-          return response()->json($result);
-      } catch (\Throwable $th) {
-          return response()->json(['error' => $th->getMessage()], 500);
-      }
-  }
     
     public function chartLamaLulusan(Request $request){
+      $tahun = $request->tahun;
+      $angkatan = $request->angkatan;
+  
+      $angkatanArray = explode('/', $angkatan);
+  
+      $angkatanString = "('" . implode("','", $angkatanArray) . "')";
+
+      if(empty($tahun) || $tahun == null){
+        return response()->json(['message' => 'tahun param required.']);
+      }
+      if(empty($angkatan) || $angkatan == null){
+        return response()->json(['message' => 'angk$angkatan param required.']);
+      }
+
         try {
           $students = DB::select("
             SELECT a.code, a.name, a.sex, b.name AS prodi, a.ipk, a.thesis_title, 
@@ -904,43 +903,58 @@ class ChartController extends Controller
                    IF(SUBSTRING(DATEDIFF(a.graduated_date, CONCAT(YEAR(a.registered_date), '-09-01'))/365, 1, 3) <= 4, 'Lulus Tepat Waktu', 'Lulus Tidak Tepat Waktu') AS keterangan
             FROM siak_student a
             INNER JOIN siak_department b ON b.code = a.department_code
-            WHERE SUBSTRING(a.code, 1, 2) IN ('19', '20', '21', '22')
+            WHERE SUBSTRING(a.code, 1, 2) IN $angkatanString
                 AND a.status = 'GRADUATED'
-                AND YEAR(a.graduated_date) = '2023'
+                AND YEAR(a.graduated_date) = $tahun
             GROUP BY a.code, a.name, a.sex, b.name, a.ipk, a.thesis_title, 
                      a.graduated_date, tahun_daftar, tahun, lama_lulus, keterangan
         ");
 
         $prodiCounts = [];
         $labels = [];
-
+        $averageLamaLulusan = [];
+        
         foreach ($students as $student) {
             $prodi = $student->prodi;
-
+            $lamaLulus = (float) $student->lama_lulus; 
+        
             if (!array_key_exists($prodi, $prodiCounts)) {
                 $prodiCounts[$prodi] = 1;
+                $averageLamaLulusan[$prodi] = $lamaLulus; 
                 $labels[] = $prodi;
             } else {
                 $prodiCounts[$prodi]++;
+                $averageLamaLulusan[$prodi] += $lamaLulus;
             }
         }
-
+        
+        foreach ($averageLamaLulusan as $prodi => $totalLamaLulusan) {
+            $averageLamaLulusan[$prodi] = $totalLamaLulusan / $prodiCounts[$prodi];
+        }
+        
         $data = [
-          'series' => [
-              [
-                  'name' => 'Total Data Mhs Per Pdi',
-                  'type' => 'column',
-                  'data' => array_values($prodiCounts),
-              ],
-          ],
-          'labels' => $labels,
-      ];
-
-      return new ApiResource(true, 'Chart lookup Value', $data);
+            'series' => [
+                [
+                    'name' => 'Total Data Mhs Per Prodi',
+                    'type' => 'column',
+                    'data' => array_values($prodiCounts),
+                ],
+                [
+                    'name' => 'Rata-rata Lama Lulusan',
+                    'type' => 'column',
+                    'data' => array_values($averageLamaLulusan), // Menambahkan data rata-rata lama lulusan
+                ],
+            ],
+            'labels' => $labels,
+        ];
+        
+        return new ApiResource(true, 'Chart lama lulusan', $data);
+        
         } catch (\Throwable $th) {
             return response()->json(['error' => $th->getMessage()], 500);
         }
     }
+    
 
     public function chartJafung(Request $request){
       $key = $request->key;
