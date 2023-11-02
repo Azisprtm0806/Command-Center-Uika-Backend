@@ -74,6 +74,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk']);
             Route::get('/lama-lulusan-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartLamaLulusan']);
             Route::get('/jafung-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafung']);
+            Route::get('/jafung-chart-new', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungNew']);
             Route::get('/jafung-prodi-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungProdi']);
         });
     });

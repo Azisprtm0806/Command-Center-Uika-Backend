@@ -807,46 +807,93 @@ class ChartController extends Controller
       $tahunAkademik = $request->tahun_akademik;
       $semester = strtoupper($request->semester);
       $angkatan = $request->angkatan;
-
+  
       $angkatanArray = explode('/', $angkatan);
-
+  
       $angkatanString = "('" . implode("','", $angkatanArray) . "')";
+  
+      try {
+          $dataRataRata = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', \DB::raw('SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total'))
+              ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
+              ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
+              ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN $angkatanString")
+              ->where('siak_student_academic_snapshot.academic_year', $tahunAkademik)
+              ->where('siak_student_academic_snapshot.semester', $semester)
+              ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
+              ->orderBy('siak_department.code')
+              ->orderBy('siak_student_academic_snapshot.academic_year', 'asc')
+              ->get();
+  
+              $dataMinMax = DB::select("
+                  SELECT c.code, c.name AS prodi, a.academic_year, SUBSTRING(MIN(a.ipk), 1, 4) AS minimum, SUBSTRING(MAX(a.ipk), 1, 4) AS maximum
+                  FROM siak_student_academic_snapshot a
+                  INNER JOIN siak_student b ON b.code=a.student_code
+                  INNER JOIN siak_department c ON c.code=b.department_code
+                  WHERE SUBSTRING(a.student_code, 1, 2) IN $angkatanString 
+                  AND a.academic_year = '$tahunAkademik' 
+                  AND a.semester = '$semester'
+                  GROUP BY c.code, c.name, a.academic_year
+                  HAVING MIN(a.ipk) > 0
+                  ORDER BY c.code, a.academic_year ASC
+              ");
 
-        try {
-            $data = Siak_Student_Snapshot::select('siak_department.code', 'siak_department.name AS prodi', 'siak_student_academic_snapshot.academic_year', \DB::raw('SUBSTRING(AVG(siak_student_academic_snapshot.ipk), 1, 4) AS total'))
-                ->join('siak_student', 'siak_student.code', '=', 'siak_student_academic_snapshot.student_code')
-                ->join('siak_department', 'siak_department.code', '=', 'siak_student.department_code')
-                ->whereRaw("SUBSTRING(siak_student_academic_snapshot.student_code, 1, 2) IN $angkatanString")
-                ->where('siak_student_academic_snapshot.academic_year', $tahunAkademik)
-                ->where('siak_student_academic_snapshot.semester', $semester)
-                ->groupBy('siak_department.code', 'siak_department.name', 'siak_student_academic_snapshot.academic_year')
-                ->orderBy('siak_department.code')
-                ->orderBy('siak_student_academic_snapshot.academic_year', 'asc')
-                ->get();
-    
-            $ipkData = $data->pluck('total')->map(function ($ipk) {
-                return floatval($ipk);
-            })->toArray();
-    
-            $prodiLabels = $data->pluck('prodi')->toArray();
-    
-            $finalResponse = [
-                'series' => [
-                    [
-                        'name' => 'Data IPK Mahasiswa Per Prodi',
-                        'type' => 'column',
-                        'data' => $ipkData,
-                    ],
-                ],
-                'label' => $prodiLabels,
-            ];
-    
-            return new ApiResource(true, 'Chart IPK', $finalResponse);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+          $prodiLabels = $dataRataRata->pluck('prodi')->unique();
+  
+          $ipkDataRataRata = $dataRataRata->pluck('total')->map(function ($ipk) {
+              return floatval($ipk);
+          })->toArray();
+  
+          $minData = [];
+          $maxData = [];
+  
+          foreach ($prodiLabels as $label) {
+            $minData[] = in_array($label, array_column($dataMinMax, 'prodi')) ? floatval($dataMinMax[array_search($label, array_column($dataMinMax, 'prodi'))]->minimum) : 0;
+            $maxData[] = in_array($label, array_column($dataMinMax, 'prodi')) ? floatval($dataMinMax[array_search($label, array_column($dataMinMax, 'prodi'))]->maximum) : 0;
+            
+          }
+  
+          $finalResponse = [
+              'series' => [
+                  [
+                      'name' => 'Min',
+                      'type' => 'column',
+                      'data' => $minData,
+                  ],
+                  [
+                      'name' => 'Rata Rata',
+                      'type' => 'column',
+                      'data' => $ipkDataRataRata,
+                  ],
+                  [
+                      'name' => 'Max',
+                      'type' => 'column',
+                      'data' => $maxData,
+                  ],
+              ],
+              'label' => $prodiLabels,
+          ];
+  
+          return new ApiResource(true, 'Chart IPK', $finalResponse);
+      } catch (\Exception $e) {
+          return response()->json(['error' => $e->getMessage()], 500);
+      }
     }
+  
+  
+  
 
+
+    public function testMinMax(Request $request) {
+      try {
+  
+
+  
+          return response()->json($result);
+      } catch (\Throwable $th) {
+          return response()->json(['error' => $th->getMessage()], 500);
+      }
+  }
+    
     public function chartLamaLulusan(Request $request){
         try {
           $students = DB::select("
@@ -976,6 +1023,39 @@ class ChartController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
+    public function chartJafungNew(Request $request)
+    {
+        $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
+            ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+            ->where('adm_lookup.lookup_name', 'DIVISION')
+            ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+            ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+            ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+            ->get();
+    
+        $lookupValues = $data->pluck('lookup_value')->unique()->values();
+        $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+        $chartData = [
+            'series' => [],
+            'label' => $jabatanFungsionalValues->toArray(),
+        ];
+    
+        foreach ($lookupValues as $lookupValue) {
+            $seriesData = [];
+            foreach ($jabatanFungsionalValues as $jabatanFungsional) {
+                $count = $data->where('lookup_value', $lookupValue)->where('jabatan_fungsional', $jabatanFungsional)->count();
+                $seriesData[] = $count;
+            }
+            $chartData['series'][] = [
+                'name' => $lookupValue,
+                'data' => $seriesData,
+            ];
+        }
+    
+        return response()->json($chartData);
+    }
+    
 
     public function chartJafungProdi(Request $request){
       $prodi = $request->prodi;
