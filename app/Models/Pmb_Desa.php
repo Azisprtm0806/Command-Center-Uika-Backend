@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Siak_Frs extends Model
+class Pmb_Desa extends Model
 {
-    protected $table = 'siak_frs';
+    protected $table = 'pmb_desa';
 }
