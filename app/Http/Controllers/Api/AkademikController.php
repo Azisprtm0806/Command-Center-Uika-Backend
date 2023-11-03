@@ -476,12 +476,17 @@ class AkademikController extends Controller
     public function petaSebaranDesaMhs(Request $request) {
       $key = $request->key;
       $tahun = $request->tahun_akademik;
+      $prodi = $request->prodi;
 
       if(empty($key) || $key == null){
         return response()->json(['message' => 'key param required.']);
       }
       if(empty($tahun) || $tahun == null){
         return response()->json(['message' => 'tahun param required.']);
+      }
+      
+      if($key == 'prodi' && empty($prodi)){
+        return response()->json(['message' => 'if you select param key=prodi, you have to add param prodi=FT_TI']);
       }
 
 
@@ -580,8 +585,55 @@ class AkademikController extends Controller
           }
           
           return Datatables::of($newData)->addIndexColumn()->make(true);
+        } else if($key == 'prodi'){
+          $data = DB::table('pmb_registration as a')
+          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+          ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+          ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+          ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+          ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+          ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+          ->select(
+              'c.registration_no',
+              'c.name as nama_mahasiswa',
+              'c.student_code as npm',
+              'c.sex',
+              'g.name as prodi',
+              'd.name as provinsi',
+              'f.name as city',
+              'h.name as kecamatan',
+              'e.name as desa',
+              'c.address'
+          )
+          ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
+          ->where('a.academic_year', $tahun)
+          ->where('c.student_code', '!=', '')
+          ->where('a.department_code', '=', $prodi)
+          ->get();
+      
+          $jsonData = json_decode(file_get_contents(storage_path('latlon/new_desa_latlong.json')), true);
+          
+          $newData = [];
+          
+          foreach ($data as $row) {
+              $nameToMatch = $row->npm;
+              $matchingData = array_filter($jsonData, function ($item) use ($nameToMatch) {
+                  return $item['npm'] === $nameToMatch;
+              });
+          
+              if (!empty($matchingData)) {
+                  $matchingData = reset($matchingData);
+                  $row->latitude = $matchingData['latitude'];
+                  $row->longitude = $matchingData['longitude'];
+              }
+          
+              $newData[] = (array) $row; 
+          }
+          
+          return Datatables::of($newData)->addIndexColumn()->make(true);
         } else {
-          return response()->json(['message' => 'value key param not allowed. must be [new, old]' ]);
+          return response()->json(['message' => 'value key param not allowed. must be [mhs, peminat, prodi]' ]);
         }
 
       } catch (\Exception $e) {
