@@ -2,50 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller{
-  public function login(Request $request)
-  {
-      // Validasi permintaan masuk
-      $request->validate([
-          'email' => 'required|email',
-          'password' => 'required',
-      ]);
+    public function login(Request $request)
+    {
+        $credentials = $request->only('username', 'password');
+        
+        // Menggunakan query kustom untuk mendapatkan data pengguna
+        $user = DB::table('adm_users')
+            ->where('title', '!=', 'MAHASISWA')
+            ->where('locked', 'N')
+            ->where('username', $credentials['username'])
+            ->first();
+    
+        if ($user && $user->password === md5($credentials['password'])) {
+            if ($token = Auth::login($user)) {
+                return $this->respondWithToken($token);
+            }
+        }
+    
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    public function logout()
+    {
+        Auth::logout();
+    
+        return response()->json(['message' => 'Successfully logged out']);
+    }
 
-      $kredensial = $request->only('email', 'password');
+    public function getProfile()
+{
+    $user = auth()->user();
+    return response()->json(['user' => $user]);
+}
 
-      if (Auth::attempt($kredensial)) {
-          $user = Auth::user();
-
-          // Hasilkan token untuk pengguna (Anda dapat menggunakan Laravel Passport atau paket lain)
-          $token = $user->createToken('authToken')->plainTextToken;
-
-          return response()->json([
-              'user' => $user,
-              'token' => $token,
-          ]);
-      } else {
-          return response()->json(['message' => 'Password Or Email tidak valid'], 401);
-      }
-  }
-
-  // Fungsi Logout
-  public function logout(Request $request)
-  {
-      // Mencabut token pengguna
-      $request->user()->tokens()->delete();
-
-      return response()->json(['message' => 'Berhasil keluar']);
-  }
-
-  // Fungsi Dapatkan Profil Pengguna
-  public function getProfile()
-  {
-      $user = Auth::user();
-
-      return response()->json(['user' => $user]);
-  }
 }
