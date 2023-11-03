@@ -475,10 +475,16 @@ class AkademikController extends Controller
 
     public function petaSebaranDesaMhs(Request $request) {
       $key = $request->key;
+      $tahun = $request->tahun_akademik;
 
       if(empty($key) || $key == null){
         return response()->json(['message' => 'key param required.']);
       }
+      if(empty($tahun) || $tahun == null){
+        return response()->json(['message' => 'tahun param required.']);
+      }
+
+
       try {
         if($key == 'mhs'){
           $data = DB::table('pmb_registration as a')
@@ -502,7 +508,7 @@ class AkademikController extends Controller
               'c.address'
           )
           ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
-          ->where('a.academic_year', '2022/2023')
+          ->where('a.academic_year', $tahun)
           ->where('c.student_code', '!=', '')
           ->get();
       
@@ -547,21 +553,21 @@ class AkademikController extends Controller
               'e.name as desa',
               'c.address'
           )
-          ->where(function ($query) {
+          ->where(function ($query) use ($tahun) {
               $query->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
-                  ->where('a.academic_year', '2022/2023')
+                  ->where('a.academic_year', $tahun)
                   ->where('c.student_code', '');
           })
           ->get();
                 
-          $jsonData = json_decode(file_get_contents(storage_path('latlon/new_desa_latlong.json')), true);
+          $jsonData = json_decode(file_get_contents(storage_path('latlon/peminat_desa_latlong.json')), true);
           
           $newData = [];
           
           foreach ($data as $row) {
-              $nameToMatch = $row->npm;
+              $nameToMatch = $row->registration_no;
               $matchingData = array_filter($jsonData, function ($item) use ($nameToMatch) {
-                  return $item['npm'] === $nameToMatch;
+                  return $item['no_regist'] === $nameToMatch;
               });
           
               if (!empty($matchingData)) {
@@ -702,29 +708,32 @@ class AkademikController extends Controller
     public function latlongDesa(Request $request){  
       try {
         $data = DB::table('pmb_registration as a')
-        ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
-        ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
-        ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
-        ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
-        ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
-        ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
-        ->join('siak_department as g', 'g.code', '=', 'a.department_code')
-        ->select(
-            'c.registration_no',
-            'c.name as nama_mahasiswa',
-            'c.student_code as npm',
-            'c.sex',
-            'g.name as prodi',
-            'd.name as provinsi',
-            'f.name as city',
-            'h.name as kecamatan',
-            'e.name as desa',
-            'c.address'
-        )
-        ->whereRaw("b.fee_item IN ('1000', '1001', '1002', '1003')")
-        ->where('a.academic_year', '2022/2023')
-        ->where('c.student_code', '!=', '')
-        ->get();
+          ->join('pmb_registration_payment as b', 'b.registration_no', '=', 'a.registration_no')
+          ->join('pmb_candidate as c', 'c.registration_no', '=', 'a.registration_no')
+          ->join('pmb_provinsi as d', 'd.id', '=', 'c.prov_code')
+          ->join('pmb_desa as e', 'e.id', '=', 'c.desa_code')
+          ->join('pmb_kabupaten as f', 'f.id', '=', 'c.kabkot_code')
+          ->join('pmb_kecamatan as h', 'h.id', '=', 'c.kec_code')
+          ->join('siak_department as g', 'g.code', '=', 'a.department_code')
+          ->select(
+              'c.registration_no',
+              'c.name as nama_mahasiswa',
+              'c.student_code as npm',
+              'c.sex',
+              'g.name as prodi',
+              'd.name as provinsi',
+              'f.name as city',
+              'h.name as kecamatan',
+              'e.name as desa',
+              'c.address'
+          )
+          ->where(function ($query)  {
+              $query->whereIn('b.fee_item', ['1000', '1001', '1002', '1003'])
+                  ->where('a.academic_year', '2022/2023')
+                  ->where('c.student_code', '')
+                  ->orderBy('c.registration_no', 'desc');
+          })
+          ->get();
   
   
           foreach ($data as $item) {
@@ -735,7 +744,7 @@ class AkademikController extends Controller
                   $province = $item->provinsi;
 
                   $address = "$village, $subdistrict, $city, $province";
-                  $existingData = $this->getExistingData($item->npm);
+                  $existingData = $this->getExistingData($item->registration_no);
   
                   if (!$existingData) {
                       $geocodedData = $this->geocodeAddressTest($address);
@@ -743,7 +752,7 @@ class AkademikController extends Controller
                       if ($geocodedData) {
                           $item->latitude = $geocodedData['latitude'];
                           $item->longitude = $geocodedData['longitude'];
-                          $this->updateLatLongInDatabase($item->npm, $geocodedData['latitude'], $geocodedData['longitude']);
+                          $this->updateLatLongInDatabase($item->registration_no, $geocodedData['latitude'], $geocodedData['longitude']);
                       }
                   }
           }
@@ -754,8 +763,8 @@ class AkademikController extends Controller
       }
     }
 
-    private function getExistingData($npm) {
-      $filePath = storage_path('latlon/new_desa_latlong.json');
+    private function getExistingData($no_regist) {
+      $filePath = storage_path('latlon/peminat_desa_latlong.json');
       
       if (file_exists($filePath)) {
           $jsonData = file_get_contents($filePath);
@@ -763,8 +772,8 @@ class AkademikController extends Controller
 
           if (is_array($data)) {
               foreach ($data as $item) {
-                  // Check if the 'npm' matches the provided npm
-                  if (isset($item['npm']) && $item['npm'] === $npm) {
+                  // Check if the 'no_regist' matches the provided no_regist
+                  if (isset($item['no_regist']) && $item['no_regist'] === $no_regist) {
                       return $item;
                   }
               }
@@ -795,10 +804,10 @@ class AkademikController extends Controller
       return null;
     }
     
-    private function updateLatLongInDatabase($npm, $latitude, $longitude) {
+    private function updateLatLongInDatabase($no_regist, $latitude, $longitude) {
         $data = [];
     
-        $filePath = storage_path('latlon/new_desa_latlong.json');
+        $filePath = storage_path('latlon/peminat_desa_latlong.json');
     
         if (file_exists($filePath)) {
             $jsonData = file_get_contents($filePath);
@@ -806,7 +815,7 @@ class AkademikController extends Controller
         }
     
         $data[] = [
-            'npm' => $npm,
+            'no_regist' => $no_regist,
             'latitude' => $latitude,
             'longitude' => $longitude,
         ];

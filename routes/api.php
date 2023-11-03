@@ -6,11 +6,13 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/profile', [AuthController::class, 'getProfile']);
-});
+// Route::post('login', 'AuthController@login');
+// Route::middleware('auth:api')->group(function () {
+//     Route::post('logout', 'AuthController@logout');
+// });
+// Route::middleware('auth:api')->get('/user/profile', 'AuthController@getProfile');
+
+
 
 Route::group(['prefix' => 'v1'], function(){
     Route::prefix('/cc')->group(function (){
