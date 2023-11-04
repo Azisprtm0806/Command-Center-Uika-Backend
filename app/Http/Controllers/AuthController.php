@@ -17,7 +17,7 @@ class AuthController extends Controller{
     public function login(Request $request){
 
           $username = $request->input('username');
-    $password = $request->input('password');
+          $password = $request->input('password');
         
         $user = User::where('title', '!=', 'MAHASISWA')
             ->where('locked', 'N')
@@ -27,7 +27,6 @@ class AuthController extends Controller{
     
         if ($user && $user->password === md5($password)) {
             $token = JWTAuth::fromUser($user);
-            dd($token);
             return $this->respondWithToken($token);
         }
     

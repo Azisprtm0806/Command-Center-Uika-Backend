@@ -829,11 +829,11 @@ class ChartController extends Controller
                   FROM siak_student_academic_snapshot a
                   INNER JOIN siak_student b ON b.code=a.student_code
                   INNER JOIN siak_department c ON c.code=b.department_code
-                  WHERE SUBSTRING(a.student_code, 1, 2) IN $angkatanString 
+                  WHERE SUBSTRING(a.student_code, 1, 2) IN $angkatanString
+                  AND a.ipk > 0
                   AND a.academic_year = '$tahunAkademik' 
                   AND a.semester = '$semester'
                   GROUP BY c.code, c.name, a.academic_year
-                  HAVING MIN(a.ipk) > 0
                   ORDER BY c.code, a.academic_year ASC
               ");
 
@@ -1038,37 +1038,49 @@ class ChartController extends Controller
       }
     }
 
-    public function chartJafungNew(Request $request)
-    {
-        $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
-            ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
-            ->where('adm_lookup.lookup_name', 'DIVISION')
-            ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
-            ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
-            ->where('simpeg_pegawai.status_kerja', 'AKTIF')
-            ->get();
+    // public function chartJafungNew(Request $request)
+    // {
+    //     $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
+    //         ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+    //         ->where('adm_lookup.lookup_name', 'DIVISION')
+    //         ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+    //         ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+    //         ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+    //         ->get();
     
-        $lookupValues = $data->pluck('lookup_value')->unique()->values();
-        $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
-        $chartData = [
-            'series' => [],
-            'label' => $jabatanFungsionalValues->toArray(),
-        ];
+    //     $lookupValues = $data->pluck('lookup_value')->unique()->values();
+    //     $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+    //     $none;
+        
+    //     $chartData = [
+    //         'series' => [],
+    //         'label' => $lookupValues->toArray(),
+    //     ];
     
-        foreach ($lookupValues as $lookupValue) {
-            $seriesData = [];
-            foreach ($jabatanFungsionalValues as $jabatanFungsional) {
-                $count = $data->where('lookup_value', $lookupValue)->where('jabatan_fungsional', $jabatanFungsional)->count();
-                $seriesData[] = $count;
-            }
-            $chartData['series'][] = [
-                'name' => $lookupValue,
-                'data' => $seriesData,
-            ];
-        }
+    //     foreach ($jabatanFungsionalValues as $jabatan) {
+    //         $seriesData = [];
+    //         // if($jabatan == "(none)" || $jabatan == ""){
+    //         //   $count1 = $data->where('jabatan_fungsional', "(none)")->count();
+    //         //   $count2 = $data->where('jabatan_fungsional', "")->count();
+    //         //   $none = $count1 + $count2;
+    //         //   $jabatan = $none;
+    //         //   $chartData['label'] = "(none)";
+    //         // }
+    //         foreach ($lookupValues as $lookupValue) {
+    //             $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
+    //             $seriesData[] = $count;
+    //         }
+    //         $chartData['series'][] = [
+    //             'name' => $jabatan,
+    //             'data' => $seriesData,
+    //         ];
+    //     }
     
-        return response()->json($chartData);
-    }
+    //     return response()->json($chartData);
+    // }
+
+    
+
     
 
     public function chartJafungProdi(Request $request){
@@ -1106,5 +1118,177 @@ class ChartController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
+
+    public function paiChart(Request $request)
+    {
+        try {
+            $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
+                ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+                ->where('adm_lookup.lookup_name', 'DIVISION')
+                ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+                ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+                ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+                ->get();
+    
+            $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+            $jmlJafung = [];
+            $labels = [];
+            $none;
+    
+            foreach ($jabatanFungsionalValues as $jabatan) {
+                $count = $data->where('jabatan_fungsional', $jabatan)->count();
+
+                if($jabatan == "(none)" || $jabatan == ""){
+                  
+                  if(!isset($none)){
+                    $count1 = $data->where('jabatan_fungsional', "(none)")->count();
+                    $count2 = $data->where('jabatan_fungsional', "")->count();
+                    $none = $count1 + $count2;
+                    $jmlJafung[] = $none;
+                    $labels[] = "NON FUNGSIONAL";
+                  }
+                } else {
+                $count = $data->where('jabatan_fungsional', $jabatan)->count();
+
+
+                  $jmlJafung[] = $count;
+                  $labels[] = $jabatan;
+                }
+            }
+    
+            $finalResponse = [
+                'series' => [
+                    [
+                        'name' => 'Jumlah Jafung',
+                        'type' => 'column',
+                        'data' => $jmlJafung,
+                    ],
+                ],
+                'label' => $labels,
+            ];
+    
+            return new ApiResource(true, 'Chart Pai', $finalResponse);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // public function chartJafungNew(Request $request){
+    //   $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
+    //       ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+    //       ->where('adm_lookup.lookup_name', 'DIVISION')
+    //       ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+    //       ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+    //       ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+    //       ->get();
   
+    //   $lookupValues = $data->pluck('lookup_value')->unique()->values();
+    //   $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+  
+    //   $chartData = [
+    //       'series' => [],
+    //       'label' => $lookupValues->toArray(),
+    //   ];
+  
+    //   $noneData = [];
+  
+    //   foreach ($jabatanFungsionalValues as $jabatan) {
+    //       $seriesData = [];
+    //       foreach ($lookupValues as $lookupValue) {
+    //           if ($jabatan == "(none)" || $jabatan == "") {
+    //               $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
+    //               $seriesData[] = $count;
+    //           } else {
+    //               $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
+    //               $seriesData[] = $count;
+    //           }
+    //       }
+  
+    //       if ($jabatan == "(none)" || $jabatan == "") {
+    //           $noneData = array_map(function ($a, $b) {
+    //               return $a + $b;
+    //           }, $noneData, $seriesData);
+    //       } else {
+    //           $chartData['series'][] = [
+    //               'name' => $jabatan,
+    //               'data' => $seriesData,
+    //           ];
+    //       }
+    //   }
+    //   $chartData['series'][] = [
+    //       'name' => 'NON FUNGSIONAL',
+    //       'data' => $noneData,
+    //   ];
+  
+    //   return response()->json($chartData);
+    // }
+
+    public function chartJafungNew(Request $request)
+{
+    $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional', 'simpeg_pegawai.nama')
+        ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+        ->where('adm_lookup.lookup_name', 'DIVISION')
+        ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+        ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+        ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+        ->get();
+
+    $lookupValues = $data->pluck('lookup_value')->unique()->values();
+    $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+  
+    $namaDosen = $data->pluck('nama')->unique()->values()->toArray();
+
+    $chartData = [
+        'series' => [],
+        'label' => $lookupValues->toArray(),
+    ];
+
+    $noneData = [];
+    $namaDosenData = [];
+
+    foreach ($jabatanFungsionalValues as $jabatan) {
+        $seriesData = [];
+        $namaDosenSeries = [];
+        foreach ($lookupValues as $lookupValue) {
+            if ($jabatan == "(none)" || $jabatan == "") {
+                $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
+                $seriesData[] = $count;
+            } else {
+                $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
+                $seriesData[] = $count;
+            }
+            // Menambahkan nama dosen ke dalam array namaDosenSeries
+            $namaDosenCount = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->pluck('nama')->toArray();
+            $namaDosenSeries[] = $namaDosenCount;
+        }
+
+        if ($jabatan == "(none)" || $jabatan == "") {
+            $noneData = array_map(function ($a, $b) {
+                return $a + $b;
+            }, $noneData, $seriesData);
+        } else {
+            $chartData['series'][] = [
+                'name' => $jabatan,
+                'data' => $seriesData,
+            ];
+        }
+        
+        // Menambahkan nama dosen ke dalam array namaDosenData
+        $namaDosenData[] = $namaDosenSeries;
+    }
+    $chartData['series'][] = [
+        'name' => 'NON FUNGSIONAL',
+        'data' => $noneData,
+    ];
+  
+    // Menambahkan data nama dosen
+    $chartData['series'][] = [
+        'name' => 'Nama Dosen',
+        'data' => $namaDosenData,
+    ];
+
+    return response()->json($chartData);
+}
+
+    
 }
