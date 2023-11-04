@@ -5,12 +5,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
-
-// Route::post('login', 'AuthController@login');
-// Route::middleware('auth:api')->group(function () {
-//     Route::post('logout', 'AuthController@logout');
-// });
-// Route::middleware('auth:api')->get('/user/profile', 'AuthController@getProfile');
+Route::group(['middleware' => 'api','prefix' => 'auth'], function ($router) {
+    Route::post('login', [\App\Http\Controllers\AuthController::class, 'login']);
+    Route::post('logout', [\App\Http\Controllers\AuthController::class, 'logout']);
+    Route::post('me', [\App\Http\Controllers\AuthController::class, 'getProfile']);
+});
 
 
 
@@ -78,6 +77,13 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/jafung-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafung']);
             Route::get('/jafung-chart-new', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungNew']);
             Route::get('/jafung-prodi-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungProdi']);
+        });
+
+        Route::prefix('/master')->group(function (){
+            Route::get('/prodi', [\App\Http\Controllers\Api\DataFilterController::class, 'dataProdi']);
+            Route::get('/fakultas', [\App\Http\Controllers\Api\DataFilterController::class, 'dataFakultas']);
+            Route::get('/semester', [\App\Http\Controllers\Api\DataFilterController::class, 'dataSemester']);
+            Route::get('/tahun-akademik', [\App\Http\Controllers\Api\DataFilterController::class, 'dataTahunAKademik']);
         });
     });
 });

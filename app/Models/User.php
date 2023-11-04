@@ -1,6 +1,7 @@
 <?php
 
-namespace App;
+namespace App\Models;
+
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -10,20 +11,20 @@ class User extends Authenticatable implements JWTSubject
     protected $table = 'adm_users';
 
     protected $fillable = [
-        'username', 'password', 'realname', 'email', 'branch', 'division',
+        'username', 'password', 'realname', 'email', 'branch', 'division', 'id_number',
     ];
 
-    protected $hidden = [
-        'password',
-    ];
+    protected $primaryKey = 'id_number';
 
     public function getJWTIdentifier()
     {
-        return $this->getKey();
+        return 'id_number';
     }
 
     public function getJWTCustomClaims()
     {
-        return [];
+        return [
+            'id_number' => $this->id_number,
+        ];
     }
 }
