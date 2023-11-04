@@ -829,11 +829,11 @@ class ChartController extends Controller
                   FROM siak_student_academic_snapshot a
                   INNER JOIN siak_student b ON b.code=a.student_code
                   INNER JOIN siak_department c ON c.code=b.department_code
-                  WHERE SUBSTRING(a.student_code, 1, 2) IN $angkatanString 
+                  WHERE SUBSTRING(a.student_code, 1, 2) IN $angkatanString
+                  AND a.ipk > 0
                   AND a.academic_year = '$tahunAkademik' 
                   AND a.semester = '$semester'
                   GROUP BY c.code, c.name, a.academic_year
-                  HAVING MIN(a.ipk) > 0
                   ORDER BY c.code, a.academic_year ASC
               ");
 
