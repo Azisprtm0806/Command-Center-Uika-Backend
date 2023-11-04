@@ -85,6 +85,9 @@ return [
 
     ],
 
+    'identifier' => 'id_number',
+    'subject' => 'email',
+
     /*
     |--------------------------------------------------------------------------
     | JWT time to live
