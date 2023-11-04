@@ -18,13 +18,11 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTIdentifier()
     {
-        return 'id_number';
+        return $this->getKey();
     }
 
     public function getJWTCustomClaims()
     {
-        return [
-            'id_number' => $this->id_number,
-        ];
+        return [];
     }
 }
