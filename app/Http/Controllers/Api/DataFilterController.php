@@ -33,5 +33,13 @@ class DataFilterController extends Controller{
       return response()->json(['error' => $e->getMessage()], 500);
     }
   }
+  public function dataTahunAKademik(){
+    try {
+      $tahunAkademik = DB::select('SELECT academic_year FROM pmb_academic_year GROUP BY academic_year ORDER BY academic_year ASC LIMIT 7');
+      return $tahunAkademik;
+    } catch (\Exception $e) {
+      return response()->json(['error' => $e->getMessage()], 500);
+    }
+  }
 }
 

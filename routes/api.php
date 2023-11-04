@@ -83,6 +83,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/prodi', [\App\Http\Controllers\Api\DataFilterController::class, 'dataProdi']);
             Route::get('/fakultas', [\App\Http\Controllers\Api\DataFilterController::class, 'dataFakultas']);
             Route::get('/semester', [\App\Http\Controllers\Api\DataFilterController::class, 'dataSemester']);
+            Route::get('/tahun-akademik', [\App\Http\Controllers\Api\DataFilterController::class, 'dataTahunAKademik']);
         });
     });
 });
