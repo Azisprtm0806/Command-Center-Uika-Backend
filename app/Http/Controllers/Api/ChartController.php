@@ -1050,6 +1050,7 @@ class ChartController extends Controller
     
         $lookupValues = $data->pluck('lookup_value')->unique()->values();
         $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+        
         $chartData = [
             'series' => [],
             'label' => $lookupValues->toArray(),
@@ -1069,6 +1070,11 @@ class ChartController extends Controller
     
         return response()->json($chartData);
     }
+
+
+    
+
+
     
 
     public function chartJafungProdi(Request $request){
@@ -1106,5 +1112,59 @@ class ChartController extends Controller
           return response()->json(['error' => $e->getMessage()], 500);
       }
     }
-  
+
+    public function paiChart(Request $request)
+    {
+        try {
+            $data = Simpeg_Pegawai::select('adm_lookup.lookup_id', 'adm_lookup.lookup_value', 'simpeg_pegawai.jabatan_fungsional')
+                ->join('adm_lookup', 'adm_lookup.lookup_id', '=', 'simpeg_pegawai.division')
+                ->where('adm_lookup.lookup_name', 'DIVISION')
+                ->where('simpeg_pegawai.klasi_pegawai', 'PENDIDIK (DOSEN)')
+                ->where('adm_lookup.lookup_id', '!=', 'AKADEMIK')
+                ->where('simpeg_pegawai.status_kerja', 'AKTIF')
+                ->get();
+    
+            $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
+            $jmlJafung = [];
+            $labels = [];
+            $none;
+    
+            foreach ($jabatanFungsionalValues as $jabatan) {
+                $count = $data->where('jabatan_fungsional', $jabatan)->count();
+
+                if($jabatan == "(none)" || $jabatan == ""){
+                  
+                  if(!isset($none)){
+                    $count1 = $data->where('jabatan_fungsional', "(none)")->count();
+                    $count2 = $data->where('jabatan_fungsional', "")->count();
+                    $none = $count1 + $count2;
+                    $jmlJafung[] = $none;
+                    $labels[] = "NON FUNGSIONAL";
+                  }
+                } else {
+                $count = $data->where('jabatan_fungsional', $jabatan)->count();
+
+
+                  $jmlJafung[] = $count;
+                  $labels[] = $jabatan;
+                }
+            }
+    
+            $finalResponse = [
+                'series' => [
+                    [
+                        'name' => 'Jumlah Jafung',
+                        'type' => 'column',
+                        'data' => $jmlJafung,
+                    ],
+                ],
+                'label' => $labels,
+            ];
+    
+            return new ApiResource(true, 'Chart Pai', $finalResponse);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    
 }
