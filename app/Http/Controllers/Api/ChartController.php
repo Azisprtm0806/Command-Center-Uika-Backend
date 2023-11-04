@@ -1052,17 +1052,17 @@ class ChartController extends Controller
         $jabatanFungsionalValues = $data->pluck('jabatan_fungsional')->unique()->values();
         $chartData = [
             'series' => [],
-            'label' => $jabatanFungsionalValues->toArray(),
+            'label' => $lookupValues->toArray(),
         ];
     
-        foreach ($lookupValues as $lookupValue) {
+        foreach ($jabatanFungsionalValues as $jabatan) {
             $seriesData = [];
-            foreach ($jabatanFungsionalValues as $jabatanFungsional) {
-                $count = $data->where('lookup_value', $lookupValue)->where('jabatan_fungsional', $jabatanFungsional)->count();
+            foreach ($lookupValues as $lookupValue) {
+                $count = $data->where('jabatan_fungsional', $jabatan)->where('lookup_value', $lookupValue)->count();
                 $seriesData[] = $count;
             }
             $chartData['series'][] = [
-                'name' => $lookupValue,
+                'name' => $jabatan,
                 'data' => $seriesData,
             ];
         }
