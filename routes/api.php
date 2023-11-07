@@ -24,9 +24,9 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/total-mhs-peminat', [\App\Http\Controllers\Api\AkademikController::class, 'totalMhsPeminat']);
             Route::get('/mhs-daftar-detail', [\App\Http\Controllers\Api\AkademikController::class, 'mhsDaftarDetail']);
             Route::get('/mhs-peminat-detail', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPeminatDetail']);
-            Route::get('/rata-ipk-prodi', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerProdi']);
-            Route::get('/rata-ipk-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerFakultas']);
-            Route::get('/lama-lulusan', [\App\Http\Controllers\Api\AkademikController::class, 'lamaLulusan']);
+            Route::get('/rata-ipk-prodi', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerProdi'])->middleware('jwt');
+            Route::get('/rata-ipk-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'ipkPerFakultas'])->middleware('jwt');
+            Route::get('/lama-lulusan', [\App\Http\Controllers\Api\AkademikController::class, 'lamaLulusan'])->middleware('jwt');
             Route::get('/mhs-provinsi', [\App\Http\Controllers\Api\AkademikController::class, 'mhsPerProvinsi']);
             Route::get('/mhs-diterima-provinsi-fakultas', [\App\Http\Controllers\Api\AkademikController::class, 'mhsdDiterimaProvinsiFakultas']);
             Route::get('/mhs-aktif-non-frs', [\App\Http\Controllers\Api\AkademikController::class, 'mhsAktifNonFrs']);
@@ -54,9 +54,9 @@ Route::group(['prefix' => 'v1'], function(){
         });
 
         Route::prefix('/keuangan')->group(function (){
-            Route::get('/tunggakan-mhs', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhs']);
-            Route::get('/tunggakan-mhs-spp', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSpp']);
-            Route::get('/tunggakan-mhs-sks-ujian', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSksUjian']);
+            Route::get('/tunggakan-mhs', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhs'])->middleware('jwt');
+            Route::get('/tunggakan-mhs-spp', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSpp'])->middleware('jwt');
+            Route::get('/tunggakan-mhs-sks-ujian', [\App\Http\Controllers\Api\KeuanganController::class, 'tunggakanMhsSksUjian'])->middleware('jwt');
         });
 
         Route::prefix('/mbkm-bkpl')->group(function (){
@@ -66,14 +66,14 @@ Route::group(['prefix' => 'v1'], function(){
 
         Route::prefix('/chart')->group(function (){
             Route::get('/mhs-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsChart']);
-            Route::get('/tunggakanPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTunggakanPerProdi']);
+            Route::get('/tunggakanPerProdi', [\App\Http\Controllers\Api\ChartController::class, 'jmlTunggakanPerProdi'])->middleware('jwt');;
             Route::get('/pegawai-chart', [\App\Http\Controllers\Api\ChartController::class, 'kepegawain']);
             Route::get('/struktural-chart', [\App\Http\Controllers\Api\ChartController::class, 'strukturalChart']);
             Route::get('/mbkmbkpl', [\App\Http\Controllers\Api\ChartController::class, 'jmlMbkmBkpl']);
             Route::get('/beasiswa-chart', [\App\Http\Controllers\Api\ChartController::class, 'beasiswaChart']);
             Route::get('/mhs-spp-chart', [\App\Http\Controllers\Api\ChartController::class, 'mhsSppChart']);
-            Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk']);
-            Route::get('/lama-lulusan-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartLamaLulusan']);
+            Route::get('/ipk-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartIpk'])->middleware('jwt');
+            Route::get('/lama-lulusan-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartLamaLulusan'])->middleware('jwt');
             Route::get('/jafung-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafung']);
             Route::get('/jafung-chart-new', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungNew']);
             Route::get('/jafung-prodi-chart', [\App\Http\Controllers\Api\ChartController::class, 'chartJafungProdi']);

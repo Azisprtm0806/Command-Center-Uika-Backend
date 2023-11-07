@@ -25,7 +25,7 @@ class JWT
             return response()->json(['message' => 'Token has expired'], 401);
         } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
             // Token is absent or otherwise invalid
-            return response()->json(['message' => 'Token is invalid'], 401);
+            return response()->json(['message' => 'Not Authorization'], 401);
         }
 
         return $next($request);
