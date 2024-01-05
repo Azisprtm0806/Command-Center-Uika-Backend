@@ -438,7 +438,7 @@ class AkademikController extends Controller
             'c.address'
         )
         ->where('c.student_code', '!=', '');
-        $data = $data->orderBy($request->input('orderField') ? $request->input('orderField') : 'c.student_code', $request->input('orderValue') ? $request->input('orderValue') : 'desc');
+        $data = $data->orderBy($request->input('orderField') ? $request->input('orderField') : 'c.student_code', $request->input('orderValue') ? $request>
         if ($filterField && $filterValue) {
             foreach ($filterField as $key => $value) {
                 if ($filterField[$key] != null || $filterValue[$key] != null) {
@@ -462,7 +462,7 @@ class AkademikController extends Controller
         })
         ->orderColumn('address', function ($query, $order) {
           $query->orderBy('c.address', $order);
-        })
+        })      
 
         ->filterColumn('npm', function ($query, $keyword) {
             $query->whereRaw("c.student_code like ?", ["%$keyword%"]);
