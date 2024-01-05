@@ -36,6 +36,7 @@ Route::group(['prefix' => 'v1'], function(){
             Route::get('/mhs-lulus-beasiswa', [\App\Http\Controllers\Api\AkademikController::class, 'mhsLulusBeasiswa']);
             Route::get('/asal-mhs', [\App\Http\Controllers\Api\AkademikController::class, 'AsalMhs']);
             Route::get('/data-mhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataMhs']);
+            Route::get('/data-mhsCpl', [\App\Http\Controllers\Api\AkademikController::class, 'dataMhsCPL']);
             Route::get('/data-mhs-peminat', [\App\Http\Controllers\Api\AkademikController::class, 'dataMhsPeminat']);
             Route::get('/data-asal-sekolah-newMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataAsalSekolahNewMhs']);
             Route::get('/data-asal-sekolah-oldMhs', [\App\Http\Controllers\Api\AkademikController::class, 'dataAsalSekolahOldMhs']);
